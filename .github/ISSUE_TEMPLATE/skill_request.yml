@@ -1,0 +1,37 @@
+name: Skill Request
+description: Propose a new skill for the collection
+labels: ["enhancement"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Proposed skill name
+      description: A short, lowercase name (e.g., `review-pr`, `explain`)
+      placeholder: e.g., my-skill
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What should this skill do?
+      description: Describe the workflow — what does it take as input, what does it produce?
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why is this useful?
+      description: What problem does it solve? How often would you use it?
+    validations:
+      required: true
+  - type: dropdown
+    id: model
+    attributes:
+      label: Recommended model
+      description: Which model tier does this skill need?
+      options:
+        - Haiku (fast, simple tasks)
+        - Sonnet (balanced)
+        - Opus (complex, multi-step reasoning)
+    validations:
+      required: false

@@ -1,6 +1,11 @@
 # Claude Code Custom Skills
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Lint Skills](https://github.com/thijsvos/Claude_Skills/actions/workflows/lint.yml/badge.svg)](https://github.com/thijsvos/Claude_Skills/actions/workflows/lint.yml)
+
 A curated collection of custom skills for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that extend its capabilities with specialized, reusable workflows.
+
+[Claude Code skills](https://docs.anthropic.com/en/docs/claude-code) are prompt-based extensions that add new slash commands to your Claude Code CLI. Install a skill, then invoke it with `/<skill-name>` — no plugins or config needed.
 
 ## Available Skills
 
@@ -23,6 +28,15 @@ cd Claude_Skills
 
 ```bash
 ./install.sh enhance
+```
+
+### Use a Skill
+
+Once installed, invoke any skill inside Claude Code:
+
+```
+> /enhance
+> /github-audit
 ```
 
 ## How It Works
@@ -92,6 +106,14 @@ The linter validates:
 The `templates/` directory contains starter files for new skills:
 - `templates/SKILL.md` — Skill definition with all frontmatter fields documented
 - `templates/README.md` — Documentation template with all required sections
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on creating and submitting skills.
+
+- **Propose a skill**: [open a Skill Request](https://github.com/thijsvos/Claude_Skills/issues/new?template=skill_request.yml)
+- **Report a bug**: [open a Bug Report](https://github.com/thijsvos/Claude_Skills/issues/new?template=bug_report.yml)
+- **Security issues**: see [SECURITY.md](SECURITY.md)
 
 ## License
 
