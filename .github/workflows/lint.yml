@@ -1,0 +1,15 @@
+name: Lint Skills
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run skill linter
+        run: chmod +x lint.sh && ./lint.sh
