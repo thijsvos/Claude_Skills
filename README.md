@@ -68,6 +68,30 @@ Skill prompt content here...
 
 After adding a skill, update the table in this README and run `./install.sh my-skill`.
 
+Starter templates are available in the `templates/` directory. See [CLAUDE.md](CLAUDE.md) for the full skill format specification and conventions.
+
+## Development
+
+### Validating Skills
+
+Run the linter to check all skills follow the project conventions:
+
+```bash
+./lint.sh            # Check all skills
+./lint.sh enhance    # Check a specific skill
+```
+
+The linter validates:
+- Required frontmatter fields (`name`, `description`, `allowed-tools`)
+- Skill name matches directory name
+- README.md exists with required sections (What It Does, Requirements, Usage, Configuration)
+
+### Templates
+
+The `templates/` directory contains starter files for new skills:
+- `templates/SKILL.md` — Skill definition with all frontmatter fields documented
+- `templates/README.md` — Documentation template with all required sections
+
 ## License
 
 [MIT](LICENSE)
