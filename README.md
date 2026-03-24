@@ -7,6 +7,7 @@ A curated collection of custom skills for [Claude Code](https://docs.anthropic.c
 | Skill | Description | Model | Effort |
 |-------|-------------|-------|--------|
 | [enhance](skills/enhance/) | Deep multi-phase project analysis that identifies and recommends the single most impactful addition to implement | Opus | Max |
+| [github-audit](skills/github-audit/) | Audits a GitHub repository against best practices and provides prioritized recommendations | Opus | Max |
 
 ## Quick Start
 
