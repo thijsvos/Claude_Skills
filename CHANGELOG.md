@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 - CODE_OF_CONDUCT.md (Contributor Covenant v2.1)
 - Dependabot configuration for GitHub Actions updates
+- Release automation workflow: auto-creates GitHub Releases from CHANGELOG when a version tag is pushed
 
 ## [0.0.1] - 2026-03-25
 
