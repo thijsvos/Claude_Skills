@@ -16,7 +16,6 @@ If you discover a security issue in a skill (e.g., a skill that exfiltrates data
 
 1. **Do not open a public issue.** Security vulnerabilities should be reported privately.
 2. **Use [GitHub Security Advisories](https://github.com/thijsvos/Claude_Skills/security/advisories/new)** to report the issue privately.
-3. Alternatively, email the maintainer directly.
 
 You should receive an acknowledgment within 48 hours and a resolution timeline within 7 days.
 

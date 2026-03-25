@@ -6,10 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-03-25
+
 ### Added
 - CODE_OF_CONDUCT.md (Contributor Covenant v2.1)
 - Dependabot configuration for GitHub Actions updates
 - Release automation workflow: auto-creates GitHub Releases from CHANGELOG when a version tag is pushed
+
+### Changed
+- Updated `actions/checkout` to v6 across all workflows
+- Removed dangling email reference from SECURITY.md
+- Fixed misleading "discussion" link in CONTRIBUTING.md
 
 ## [0.0.1] - 2026-03-25
 
@@ -27,5 +34,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
 
-[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/thijsvos/Claude_Skills/releases/tag/v0.0.1

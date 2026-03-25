@@ -65,4 +65,4 @@ Found a broken skill? [Open a Bug Report](https://github.com/thijsvos/Claude_Ski
 
 ## Questions?
 
-Open a [discussion](https://github.com/thijsvos/Claude_Skills/issues) or file an issue — we're happy to help.
+Open an [issue](https://github.com/thijsvos/Claude_Skills/issues) — we're happy to help.
