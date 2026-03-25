@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- CODE_OF_CONDUCT.md (Contributor Covenant v2.1)
+- Dependabot configuration for GitHub Actions updates
+
 ## [0.0.1] - 2026-03-25
 
 ### Added
@@ -21,3 +25,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - .editorconfig for consistent formatting
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
+
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/thijsvos/Claude_Skills/releases/tag/v0.0.1
