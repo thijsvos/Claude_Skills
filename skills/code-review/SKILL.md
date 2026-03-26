@@ -3,6 +3,7 @@ name: code-review
 description: Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers.
 allowed-tools: Read, Grep, Glob, Bash, Agent
 model: opus
+effort: max
 takes-arg: true
 ---
 
