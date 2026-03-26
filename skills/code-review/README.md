@@ -31,6 +31,7 @@ Analyzes code changes across multiple quality dimensions using parallel AI agent
 | Setting | Value |
 |---------|-------|
 | Model | `opus` |
+| Effort | `max` |
 | Takes argument | Yes |
 | Allowed tools | Read, Grep, Glob, Bash, Agent |
 
