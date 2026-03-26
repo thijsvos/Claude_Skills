@@ -13,6 +13,7 @@ A curated collection of custom skills for [Claude Code](https://docs.anthropic.c
 |-------|-------------|-------|--------|
 | [enhance](skills/enhance/) | Deep multi-phase project analysis that identifies and recommends the single most impactful addition to implement | Opus | Max |
 | [github-audit](skills/github-audit/) | Audits a GitHub repository against best practices and provides prioritized recommendations | Opus | Max |
+| [code-review](skills/code-review/) | Structured code review with prioritized findings and fix offers | Opus | — |
 
 ## Quick Start
 
@@ -37,6 +38,7 @@ Once installed, invoke any skill inside Claude Code:
 ```
 > /enhance
 > /github-audit
+> /code-review src/auth/
 ```
 
 ## How It Works
