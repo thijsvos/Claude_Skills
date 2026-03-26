@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- `code-review` skill: structured multi-dimensional code review with prioritized findings and fix offers
+
 ## [0.0.2] - 2026-03-25
 
 ### Added
