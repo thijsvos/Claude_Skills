@@ -15,6 +15,7 @@ A curated collection of custom skills for [Claude Code](https://docs.anthropic.c
 | [github-audit](skills/github-audit/) | Audits a GitHub repository against best practices and provides prioritized recommendations | Opus | Max |
 | [code-review](skills/code-review/) | Structured code review with prioritized findings and fix offers | Opus | Max |
 | [test-gen](skills/test-gen/) | Comprehensive test generation with deep code analysis, convention detection, and edge case coverage | Opus | Max |
+| [dep-check](skills/dep-check/) | Scans dependencies across ecosystems for updates and vulnerabilities, produces a prioritized update plan | Opus | Max |
 
 ## Quick Start
 
@@ -41,6 +42,7 @@ Once installed, invoke any skill inside Claude Code:
 > /github-audit
 > /code-review src/auth/
 > /test-gen src/utils.ts
+> /dep-check
 ```
 
 ## How It Works
