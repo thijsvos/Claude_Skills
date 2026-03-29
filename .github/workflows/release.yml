@@ -25,11 +25,12 @@ jobs:
 
       - name: Extract release notes from CHANGELOG.md
         id: notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           # Extract the section for this version from CHANGELOG.md
           # Matches from "## [X.Y.Z]" until the next "## [" or end of file
-          version="${{ steps.version.outputs.version }}"
-          notes=$(awk -v ver="$version" '
+          notes=$(awk -v ver="$VERSION" '
             /^## \[/ {
               if (found) exit
               if (index($0, "[" ver "]")) found=1
@@ -37,6 +38,11 @@ jobs:
             }
             found { print }
           ' CHANGELOG.md)
+
+          if [ -z "$notes" ]; then
+            echo "::error::No release notes found for version $VERSION in CHANGELOG.md"
+            exit 1
+          fi
 
           # Write to output using delimiter syntax
           {
@@ -48,7 +54,8 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ steps.notes.outputs.notes }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
-            --notes "${{ steps.notes.outputs.notes }}"
+            --notes "$RELEASE_NOTES"
