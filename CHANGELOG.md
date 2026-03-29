@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- `debug` skill: multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses
+
 ## [0.0.4] - 2026-03-29
 
 ### Added
