@@ -1,11 +1,13 @@
 ---
 name: dep-check
 description: Scans all dependency declarations across ecosystems, checks for updates and vulnerabilities, and produces a prioritized update plan with testing recommendations.
-allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 takes-arg: true
 ---
+
+Call `EnterPlanMode` immediately before doing anything else.
 
 You are performing a comprehensive dependency audit across all ecosystems present in the repository. Scan every dependency and version declaration, check for available updates and known vulnerabilities, and produce a prioritized update plan with testing recommendations.
 
@@ -440,3 +442,7 @@ If the user requests updates:
 
 If the report shows zero updates and zero vulnerabilities, skip the update offer:
 > All dependencies are up to date and no known vulnerabilities were found.
+
+---
+
+Once the report is presented (and any requested updates are applied), call `ExitPlanMode`.

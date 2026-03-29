@@ -1,11 +1,13 @@
 ---
 name: code-review
 description: Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers.
-allowed-tools: Read, Grep, Glob, Bash, Agent
+allowed-tools: Read, Grep, Glob, Bash, Agent, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 takes-arg: true
 ---
+
+Call `EnterPlanMode` immediately before doing anything else.
 
 You are performing a comprehensive, structured code review. Analyze code changes across multiple quality dimensions and produce a clear, prioritized findings report.
 
@@ -225,7 +227,9 @@ Collect all findings from the 3 agents and produce a single, structured report.
 
 ## Step 4: Offer Remediation
 
-After presenting the report, if there are any Critical or Warning findings, ask:
+After presenting the report, call `ExitPlanMode`.
+
+If there are any Critical or Warning findings, ask:
 
 > **Want me to fix any of these?** (e.g., "fix all", "fix C1 and W2", "fix all critical")
 
