@@ -1,11 +1,13 @@
 ---
 name: test-gen
 description: Analyzes code to generate comprehensive tests covering happy paths, edge cases, error handling, and integration points, matching the project's existing test conventions.
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 takes-arg: true
 ---
+
+Call `EnterPlanMode` immediately before doing anything else.
 
 You are generating comprehensive, high-quality tests for a codebase. Analyze the target code deeply, detect the project's test framework and conventions, present a structured test plan, and — after user approval — write the test files and verify they pass.
 
@@ -236,7 +238,7 @@ Covers: <what behavior or code path this validates>
 - `<function_name>` — <scenario> (covered by `<test_file_path>:<line>`)
 ```
 
-After presenting the test plan, ask:
+After presenting the test plan, call `ExitPlanMode`, then ask:
 
 > **Ready to generate these tests?** (e.g., "yes", "skip T5 and T7", "only critical", "add a test for <scenario>")
 
