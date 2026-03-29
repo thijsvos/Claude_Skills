@@ -1,4 +1,4 @@
-# Debug
+# Diagnose
 
 Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses.
 

@@ -1,5 +1,5 @@
 ---
-name: debug
+name: diagnose
 description: Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses.
 allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
