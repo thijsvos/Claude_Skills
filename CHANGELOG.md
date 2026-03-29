@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-03-29
+
 ### Added
 - `dep-check` skill: scans all dependency declarations across ecosystems for updates and vulnerabilities, produces a prioritized update plan with testing recommendations
 
@@ -43,7 +45,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
 
-[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/thijsvos/Claude_Skills/releases/tag/v0.0.1
