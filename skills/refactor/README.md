@@ -1,17 +1,17 @@
 # Refactor
 
-Three-pillar refactoring for security, performance, and readability with behavior-preserving, incremental changes.
+Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes.
 
 ## What It Does
 
-Analyzes code through three lenses simultaneously and produces a prioritized refactoring plan, delivered in 4 steps:
+Analyzes code through three complementary dimensions simultaneously and produces a prioritized refactoring plan, delivered in 4 steps:
 
 1. **Scope Resolution** -- resolves the refactoring target from a file path, directory, function/class name, branch, commit range, or natural language description. Auto-detects recently changed files via git if no target is specified. Gathers project conventions and detects test coverage.
-2. **Three-Pillar Analysis** -- launches 3 parallel read-only agents: Security (OWASP patterns, injection, auth, secrets, crypto), Performance (complexity, N+1 queries, allocations, caching, resource leaks), and Readability (naming, complexity, dead code, duplication, nesting)
-3. **Refactoring Plan** -- synthesizes findings across all three pillars, identifies cross-cutting improvements (one change benefiting multiple pillars), deduplicates, tracks dependencies, and presents a prioritized plan with confidence and risk ratings for each change
+2. **Multi-Dimensional Analysis** -- launches 3 parallel read-only Opus 4.6 agents: Correctness & Security (logic errors, null safety, type safety, error handling, OWASP patterns, injection, auth, crypto), Performance & Efficiency (complexity, N+1 queries, allocations, caching, resource leaks, scalability), and Structure & Maintainability (naming, complexity, dead code, architecture, separation of concerns, API design, testability, duplication)
+3. **Refactoring Plan** -- synthesizes findings across all dimensions, identifies cross-cutting improvements (one change benefiting multiple dimensions), deduplicates, tracks dependencies, and presents a prioritized plan with confidence and risk ratings for each change
 4. **Incremental Execution** -- after user approval, applies changes in priority order, runs tests to verify behavior preservation, and offers rollback if anything breaks
 
-The key innovation is **cross-cutting synthesis**: changes that improve multiple pillars simultaneously are identified and prioritized highest, so you get maximum value from minimal changes.
+The key innovation is **cross-cutting synthesis**: changes that improve multiple dimensions simultaneously are identified and prioritized highest, so you get maximum value from minimal changes.
 
 ## Requirements
 

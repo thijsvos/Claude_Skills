@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: Three-pillar refactoring for security, performance, and readability with behavior-preserving, incremental changes.
+description: Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes.
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
@@ -9,7 +9,7 @@ takes-arg: true
 
 Call `EnterPlanMode` immediately before doing anything else.
 
-You are performing a structured, three-pillar refactoring analysis. Examine code through Security, Performance, and Readability lenses simultaneously, synthesize cross-cutting insights, and — after user approval — execute behavior-preserving changes incrementally.
+You are performing a comprehensive, multi-dimensional refactoring analysis. Examine code through Correctness & Security, Performance & Efficiency, and Structure & Maintainability lenses simultaneously, synthesize cross-cutting insights, and — after user approval — execute behavior-preserving changes incrementally.
 
 **ARGUMENTS:** The user may provide an optional target argument — a file path, directory, function/class name, branch name, commit range, or natural language description of what to refactor. If no argument is provided, auto-detect the scope from git state.
 
@@ -110,7 +110,7 @@ State the resolved target, detected project context, and test coverage status cl
 
 ---
 
-## Step 2: Three-Pillar Analysis
+## Step 2: Multi-Dimensional Analysis
 
 Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: "opus"`).
 
@@ -119,12 +119,12 @@ Provide each agent with:
 - The project context (manifest, linting config, conventions)
 - The language and framework detected
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"`. The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override is required because Explore defaults to Haiku, which is too shallow for this skill's deep analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.6, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 
 **IMPORTANT:** Instruct each agent to read the **full target files** (not just snippets) so they understand the complete code structure, how functions relate to each other, and whether a proposed change would break callers or dependents.
 
 Each agent must return findings in this structured format:
-- **ID**: agent-local identifier (e.g., S1, P1, R1)
+- **ID**: agent-local identifier (e.g., C1, P1, S1)
 - **File**: exact file path and line number(s)
 - **Title**: short description (under 80 characters)
 - **Current pattern**: what the code does now (include the relevant code snippet)
@@ -137,10 +137,20 @@ Each agent must also return 2-3 **"Strengths"** callouts — things the code alr
 
 ---
 
-### Agent 1: Security Analysis
+### Agent 1: Correctness & Security
 
-Review the target code for security vulnerabilities and hardening opportunities:
+Review the target code for correctness issues, security vulnerabilities, and hardening opportunities:
 
+**Correctness:**
+- **Logic errors**: off-by-one errors, boundary conditions, incorrect comparisons, wrong operator precedence, short-circuit evaluation mistakes
+- **Null / undefined safety**: potential null dereferences, optional chaining gaps, missing nil checks, unsafe type assertions or casts
+- **Error handling**: swallowed exceptions, missing error propagation, catch blocks that hide failures, inconsistent error handling across similar code paths, unhandled promise rejections
+- **Type safety**: implicit type coercions that cause bugs, unchecked type assertions, missing generic constraints, stringly-typed APIs that should use enums or unions
+- **API contract violations**: wrong return types, missing required fields, incorrect parameter usage, broken interface contracts, violated pre/postconditions
+- **Concurrency correctness**: race conditions, deadlock risks, shared mutable state without synchronization, non-atomic read-modify-write sequences, missing locks or semaphores
+- **Edge cases**: empty inputs not handled, boundary values not considered, missing default cases in switch/match, unreachable code that should be reachable
+
+**Security:**
 - **Injection vulnerabilities**: SQL injection, XSS, command injection, LDAP injection, template injection, header injection
 - **Input validation**: missing or insufficient validation at trust boundaries, unsanitized user input passed to sensitive operations
 - **Authentication & authorization**: auth bypasses, privilege escalation paths, missing permission checks, session management weaknesses, insecure token handling
@@ -148,7 +158,7 @@ Review the target code for security vulnerabilities and hardening opportunities:
 - **Error information leaks**: stack traces exposed to users, internal paths or identifiers in error messages, verbose error logging with sensitive data
 - **Unsafe deserialization**: untrusted data parsed without validation (JSON.parse of user input with prototype pollution risk, pickle.loads, YAML.load, eval, Function constructor)
 - **Cryptographic weaknesses**: weak algorithms (MD5, SHA1 for security purposes), hardcoded IVs/salts, predictable random (Math.random for tokens), custom crypto implementations
-- **Race conditions & TOCTOU**: shared state accessed without synchronization, time-of-check-to-time-of-use vulnerabilities, non-atomic read-modify-write sequences
+- **TOCTOU**: time-of-check-to-time-of-use vulnerabilities in file operations, permission checks, or state validation
 - **Access control**: missing authorization on routes/endpoints, insecure direct object references, path traversal, directory traversal
 - **Resource safety**: unbounded allocations from user input, missing timeouts on network calls, denial-of-service vectors, regex backtracking (ReDoS)
 - **SSRF**: user-controlled URLs passed to HTTP clients without allowlist validation
@@ -160,9 +170,9 @@ Return findings and strengths in the structured format described above.
 
 ---
 
-### Agent 2: Performance Analysis
+### Agent 2: Performance & Efficiency
 
-Review the target code for performance issues and optimization opportunities:
+Review the target code for performance issues, resource efficiency, and optimization opportunities:
 
 - **Algorithm complexity**: O(n^2) or worse where O(n) or O(n log n) is possible, unnecessary nested loops, quadratic string concatenation
 - **N+1 queries**: database queries inside loops, repeated network calls that could be batched, sequential API calls that could be parallelized
@@ -171,8 +181,10 @@ Review the target code for performance issues and optimization opportunities:
 - **Sync-to-async opportunities**: blocking I/O operations that could be non-blocking, sequential independent operations that could be parallelized (Promise.all, asyncio.gather, goroutines)
 - **Redundant computation**: values calculated multiple times when they could be computed once and stored, unnecessary re-renders (React), duplicate processing in middleware chains
 - **Memory and resource leaks**: unclosed file handles, database connections, event listeners not removed, subscriptions not unsubscribed, timers not cleared, streams not drained
+- **Resource lifecycle**: missing cleanup in destructors/finalizers/defer, connections not returned to pools, temporary files not deleted, acquired locks not released in error paths
 - **Inefficient data structures**: arrays used where sets or maps would provide O(1) lookup, linear searches through sorted data, unnecessary copying of large structures, using objects as lookup tables without considering Map
 - **Unindexed queries**: database queries on columns without indexes, missing composite indexes for multi-column WHERE clauses, full table scans
+- **Scalability bottlenecks**: single-threaded processing where parallelism is possible, unbounded queues, missing backpressure, global locks that serialize concurrent operations
 - **Bundle and payload size**: unused imports, large dependencies where lighter alternatives exist, missing tree-shaking, uncompressed responses, oversized payloads without pagination
 
 For each finding, assign:
@@ -182,24 +194,31 @@ Return findings and strengths in the structured format described above.
 
 ---
 
-### Agent 3: Readability & Maintainability Analysis
+### Agent 3: Structure & Maintainability
 
-Review the target code for clarity, consistency, and maintainability:
+Review the target code for clarity, consistency, architecture, and maintainability:
 
+**Readability:**
 - **Naming clarity**: vague or misleading variable/function/class names (e.g., `data`, `temp`, `result`, `handle`), inconsistent naming conventions within the file, abbreviations that hurt readability
 - **Function length and complexity**: functions over 40 lines, cyclomatic complexity above 10, functions doing more than one thing, too many parameters (5+)
 - **Dead code**: unreachable code, unused imports, unused variables, commented-out code blocks, feature flags for long-removed features, functions with no callers
 - **Magic numbers and strings**: unexplained numeric constants, hardcoded string values that should be named constants, repeated literal values
 - **Complex conditionals**: deeply nested if/else chains that could be guard clauses, boolean expressions with more than 3 conditions, negated conditions that could be simplified, conditional chains that could be lookup tables
 - **Deep nesting**: more than 3 levels of indentation, arrow code, early return patterns that could flatten logic, nested callbacks that could be async/await
+- **Missing or misleading comments**: complex algorithms without explanation, comments that contradict the code, TODO/FIXME without context or ticket reference
+
+**Architecture & Design:**
+- **Separation of concerns**: business logic mixed with I/O, presentation mixed with data access, configuration scattered through application code
+- **Module boundaries**: circular dependencies, modules with too many responsibilities, god classes/files, unclear public API surfaces
+- **API ergonomics**: confusing function signatures, inconsistent parameter ordering, boolean parameters that should be enums or option objects, missing builder/fluent patterns for complex construction
+- **Testability**: tightly coupled dependencies that prevent unit testing, hidden dependencies on global state, side effects in constructors, untestable private logic that should be extracted
 - **Code duplication**: 3 or more occurrences of substantially similar logic (not minor repetition — only flag when extraction genuinely improves clarity), copy-paste patterns with slight variations
 - **Inconsistent patterns**: different error handling approaches in the same module, mixed sync/async styles without reason, inconsistent logging or validation patterns
 - **Unclear control flow**: complex state machines without documentation, non-obvious side effects, action-at-a-distance patterns, implicit ordering dependencies
 - **Overly complex abstractions**: indirection that adds complexity without value, premature generalization, unnecessary design patterns, wrapper classes that only delegate
-- **Missing or misleading comments**: complex algorithms without explanation, comments that contradict the code, TODO/FIXME without context or ticket reference
 
 For each finding, assign:
-- **Category**: naming / complexity / dead-code / magic-values / conditionals / nesting / duplication / inconsistency / control-flow / abstraction / comments
+- **Category**: naming / complexity / dead-code / magic-values / conditionals / nesting / separation / modules / api-design / testability / duplication / inconsistency / control-flow / abstraction / comments
 
 Return findings and strengths in the structured format described above.
 
@@ -213,9 +232,9 @@ Collect all findings from the 3 agents and produce a single, structured refactor
 
 1. **Deduplicate**: If two agents flagged the same line or function for related reasons, merge into one finding with combined context and note all applicable pillars.
 
-2. **Identify cross-cutting improvements**: Scan every finding's file path and line range. If two findings from different pillars touch the same function or overlap within a 10-line span, flag them as cross-cutting. Also detect semantic overlaps (e.g., "remove dead code" from Readability that also eliminates an "unused crypto import with a known CVE" from Security). Cross-cutting findings get bracket notation showing which pillars they span: `[S+P]`, `[S+R]`, `[P+R]`, `[S+P+R]`.
+2. **Identify cross-cutting improvements**: Scan every finding's file path and line range. If two findings from different dimensions touch the same function or overlap within a 10-line span, flag them as cross-cutting. Also detect semantic overlaps (e.g., "remove dead code" from Structure that also eliminates an "unused crypto import with a known CVE" from Correctness). Cross-cutting findings get bracket notation: `[C+P]` (Correctness + Performance), `[C+S]` (Correctness + Structure), `[P+S]` (Performance + Structure), `[C+P+S]` (all three).
 
-3. **Priority order**: Cross-cutting improvements first (highest value — one change, multiple benefits), then Security (by severity: Critical > High > Medium > Low), then Performance (by impact: High > Medium > Low), then Readability (by category importance).
+3. **Priority order**: Cross-cutting improvements first (highest value — one change, multiple benefits), then Correctness & Security (by severity: Critical > High > Medium > Low), then Performance & Efficiency (by impact: High > Medium > Low), then Structure & Maintainability (by category importance).
 
 4. **Track dependencies**: If one change is a prerequisite for another (e.g., "extract validation function" enables "add input sanitization"), note the dependency with "depends on R3" notation.
 
@@ -232,7 +251,7 @@ Collect all findings from the 3 agents and produce a single, structured refactor
 ```
 ## Refactoring Plan: <target description>
 
-**Scope**: <N files, M total lines> | **Findings**: <X total> (<A cross-cutting, B security, C performance, D readability>)
+**Scope**: <N files, M total lines> | **Findings**: <X total> (<A cross-cutting, B correctness/security, C performance, D structure/maintainability>)
 
 ### Test Coverage
 
@@ -244,7 +263,7 @@ Collect all findings from the 3 agents and produce a single, structured refactor
 
 | ID | File:Line | Change | Pillars | Confidence | Risk |
 |----|-----------|--------|---------|------------|------|
-| [R1] | `path:42` | <description> | [S+R] | High | Safe |
+| [R1] | `path:42` | <description> | [C+S] | High | Safe |
 
 **[R1]** `path/to/file.ext:42` — <Title>
 **Current**: <what the code does now — include code snippet>
@@ -253,7 +272,7 @@ Collect all findings from the 3 agents and produce a single, structured refactor
 
 ---
 
-### Security Hardening
+### Correctness & Security
 
 | ID | File:Line | Change | Severity | Confidence | Risk |
 |----|-----------|--------|----------|------------|------|
@@ -266,7 +285,7 @@ Collect all findings from the 3 agents and produce a single, structured refactor
 
 ---
 
-### Performance Optimization
+### Performance & Efficiency
 
 | ID | File:Line | Change | Impact | Confidence | Risk |
 |----|-----------|--------|--------|------------|------|
@@ -275,7 +294,7 @@ Collect all findings from the 3 agents and produce a single, structured refactor
 
 ---
 
-### Readability Improvements
+### Structure & Maintainability
 
 | ID | File:Line | Change | Category | Confidence | Risk |
 |----|-----------|--------|----------|------------|------|
@@ -290,9 +309,9 @@ Collect all findings from the 3 agents and produce a single, structured refactor
 
 ### Strengths (do not change)
 
-- <Positive observation from Security agent>
-- <Positive observation from Performance agent>
-- <Positive observation from Readability agent>
+- <Positive observation from Correctness & Security agent>
+- <Positive observation from Performance & Efficiency agent>
+- <Positive observation from Structure & Maintainability agent>
 
 ---
 
@@ -319,9 +338,9 @@ If the stash succeeds (exit code 0 and output is not "No local changes to save")
 
 **Execution rules:**
 
-1. **Apply in priority order**: Cross-cutting first, then Security, then Performance, then Readability. Within each group, respect dependency ordering.
+1. **Apply in priority order**: Cross-cutting first, then Correctness & Security, then Performance & Efficiency, then Structure & Maintainability. Within each group, respect dependency ordering.
 
-2. **Respect the user's selection**: If the user said "apply R1 through R4", only apply those. If "apply all safe changes", filter to Risk=Safe only. If "apply security only", filter to Security findings and cross-cutting findings that include the Security pillar.
+2. **Respect the user's selection**: If the user said "apply R1 through R4", only apply those. If "apply all safe changes", filter to Risk=Safe only. If "apply security only", filter to Correctness & Security findings and cross-cutting findings that include the Correctness pillar.
 
 3. **Use Edit for modifications** to existing files. Use Write only when creating genuinely new files (e.g., extracting a module into a new file).
 
