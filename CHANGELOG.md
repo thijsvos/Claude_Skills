@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-04-01
+
 ### Added
 - `refactor` skill: comprehensive refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes
 - `diagnose` skill (renamed from `debug` to avoid conflict with built-in Claude Code command): multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses
@@ -49,7 +51,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
 
-[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.1...v0.0.2
