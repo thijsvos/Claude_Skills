@@ -17,6 +17,7 @@ A curated collection of custom skills for [Claude Code](https://docs.anthropic.c
 | [test-gen](skills/test-gen/) | Comprehensive test generation with deep code analysis, convention detection, and edge case coverage | Opus | Max |
 | [dep-check](skills/dep-check/) | Scans dependencies across ecosystems for updates and vulnerabilities, produces a prioritized update plan | Opus | Max |
 | [diagnose](skills/diagnose/) | Multi-agent root cause analysis with error tracing, change correlation, and ranked fix hypotheses | Opus | Max |
+| [refactor](skills/refactor/) | Three-pillar refactoring for security, performance, and readability with behavior-preserving changes | Opus | Max |
 
 ## Quick Start
 
@@ -45,6 +46,7 @@ Once installed, invoke any skill inside Claude Code:
 > /test-gen src/utils.ts
 > /dep-check
 > /diagnose TypeError: Cannot read properties of undefined
+> /refactor src/auth/handler.ts
 ```
 
 ## How It Works
