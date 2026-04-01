@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- `create-skill` skill: interactive skill generator that scaffolds new skills following all project conventions, serving as the definitive reference for skill creation
+
 ## [0.0.5] - 2026-04-01
 
 ### Added
