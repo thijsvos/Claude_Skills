@@ -41,7 +41,7 @@ Every `SKILL.md` must begin with YAML frontmatter between `---` delimiters.
 
 | Field | Value | Note |
 |-------|-------|------|
-| `model` | `opus` | Resolves to Claude Opus 4.6, the most capable model |
+| `model` | `opus` | Resolves to Claude Opus 4.7, the most capable model |
 | `effort` | `max` | Maximum reasoning depth |
 
 **Optional fields:**
@@ -128,12 +128,12 @@ model: "opus"
 ```
 
 - `"Explore"` agents are **read-only** — Edit and Write are denied at the agent level. This is the safety mechanism that prevents analysis agents from modifying the project.
-- `model: "opus"` overrides the Explore agent's default (Haiku) to use **Opus 4.6**, the most capable model, ensuring thorough deep analysis.
+- `model: "opus"` overrides the Explore agent's default (Haiku) to use **Opus 4.7**, the most capable model, ensuring thorough deep analysis.
 - **Never** use `subagent_type: "general-purpose"` during analysis phases.
 
 **Required IMPORTANT block** (include verbatim in the analysis step):
 ```
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.6, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.7, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 ```
 
 **Launch boilerplate:**

@@ -7,7 +7,7 @@ Interactive skill generator that scaffolds new skills following all project conv
 Guides you through creating a new Claude Code skill from scratch, delivered in 4 steps:
 
 1. **Gather Requirements** -- parses a description of the desired skill or asks clarifying questions: name, argument handling, capabilities (read-only vs file modification vs web access), analysis dimensions, and output format
-2. **Design the Skill** -- reads existing skills for structural inspiration, then designs the complete skill following every documented and undocumented convention: tool selection, subagent configuration (Opus 4.6, Explore read-only agents), argument resolution cascade, finding IDs, report format, plan mode flow, and action offer
+2. **Design the Skill** -- reads existing skills for structural inspiration, then designs the complete skill following every documented and undocumented convention: tool selection, subagent configuration (Opus 4.7, Explore read-only agents), argument resolution cascade, finding IDs, report format, plan mode flow, and action offer
 3. **Present the Plan** -- shows the full SKILL.md and README.md content for review before any files are created
 4. **Generate, Validate, Install** -- creates the skill directory and files, updates the root README and CHANGELOG, runs the linter to validate, and installs the symlink
 
