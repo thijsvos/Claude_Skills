@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-04-23
+
 ### Added
 - `docstring-check` skill: scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies behavior-preserving fixes matching the project's detected convention
 
@@ -59,7 +61,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
 
-[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.6...HEAD
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.7...HEAD
+[0.0.7]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.3...v0.0.4
