@@ -19,6 +19,7 @@ A curated collection of custom skills for [Claude Code](https://docs.anthropic.c
 | [diagnose](skills/diagnose/) | Multi-agent root cause analysis with error tracing, change correlation, and ranked fix hypotheses | Opus | Max |
 | [refactor](skills/refactor/) | Comprehensive refactoring across correctness, security, performance, and maintainability with behavior-preserving changes | Opus | Max |
 | [create-skill](skills/create-skill/) | Interactive skill generator that scaffolds new skills following all project conventions | Opus | Max |
+| [docstring-check](skills/docstring-check/) | Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies convention-matching fixes | Opus | Max |
 
 ## Quick Start
 
@@ -49,6 +50,7 @@ Once installed, invoke any skill inside Claude Code:
 > /diagnose TypeError: Cannot read properties of undefined
 > /refactor src/auth/handler.ts
 > /create-skill "API documentation generator"
+> /docstring-check src/
 ```
 
 ## How It Works
