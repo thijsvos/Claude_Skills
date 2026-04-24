@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- `github-ship` skill: turns local changes into a GitHub issue and linked PR, or cleans up the branch if the PR was already merged — auto-detects which
+
 ## [0.0.8] - 2026-04-23
 
 ### Changed

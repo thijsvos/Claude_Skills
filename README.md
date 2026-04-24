@@ -20,6 +20,7 @@ A curated collection of custom skills for [Claude Code](https://docs.anthropic.c
 | [refactor](skills/refactor/) | Comprehensive refactoring across correctness, security, performance, and maintainability with behavior-preserving changes | Opus | Max |
 | [create-skill](skills/create-skill/) | Interactive skill generator that scaffolds new skills following all project conventions | Opus | Max |
 | [docstring-check](skills/docstring-check/) | Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies convention-matching fixes | Opus | Max |
+| [github-ship](skills/github-ship/) | Turns local changes into a GitHub issue and linked PR, or cleans up the branch if the PR was already merged. Auto-detects which | Opus | Max |
 
 ## Quick Start
 
@@ -51,6 +52,7 @@ Once installed, invoke any skill inside Claude Code:
 > /refactor src/auth/handler.ts
 > /create-skill "API documentation generator"
 > /docstring-check src/
+> /github-ship
 ```
 
 ## How It Works
