@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- `idiom-check` skill: audits a codebase through a programming-language-specific idiom lens (Rust/Python/TypeScript/Go/Ruby + a generic template for Java/Kotlin/C#/Swift/PHP), produces a severity-sorted report with concrete fixes, and ships remediation as PR-sized bundles
+
 ## [0.0.9] - 2026-04-24
 
 ### Added

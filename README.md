@@ -21,6 +21,7 @@ A curated collection of custom skills for [Claude Code](https://docs.anthropic.c
 | [create-skill](skills/create-skill/) | Interactive skill generator that scaffolds new skills following all project conventions | Opus | Max |
 | [docstring-check](skills/docstring-check/) | Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies convention-matching fixes | Opus | Max |
 | [github-ship](skills/github-ship/) | Turns local changes into a GitHub issue and linked PR, or cleans up the branch if the PR was already merged. Auto-detects which | Opus | Max |
+| [idiom-check](skills/idiom-check/) | Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles | Opus | Max |
 
 ## Quick Start
 
@@ -53,6 +54,7 @@ Once installed, invoke any skill inside Claude Code:
 > /create-skill "API documentation generator"
 > /docstring-check src/
 > /github-ship
+> /idiom-check
 ```
 
 ## How It Works
