@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.0.10] - 2026-04-25
+
 ### Added
 - `idiom-check` skill: audits a codebase through a programming-language-specific idiom lens (Rust/Python/TypeScript/Go/Ruby + a generic template for Java/Kotlin/C#/Swift/PHP), produces a severity-sorted report with concrete fixes, and ships remediation as PR-sized bundles
 
@@ -74,7 +76,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
 
-[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.9...HEAD
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.10...HEAD
+[0.0.10]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.6...v0.0.7
