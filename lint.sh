@@ -23,10 +23,23 @@ pass() { echo -e "  ${GREEN}[pass]${NC} $1"; TOTAL_PASS=$((TOTAL_PASS + 1)); }
 fail() { echo -e "  ${RED}[fail]${NC} $1"; TOTAL_FAIL=$((TOTAL_FAIL + 1)); }
 warn() { echo -e "  ${YELLOW}[warn]${NC} $1"; TOTAL_WARN=$((TOTAL_WARN + 1)); }
 
-# Extract a frontmatter field value from a SKILL.md file
+# Extract a frontmatter field value from a SKILL.md file.
+# Pure-bash implementation so genuine file/read errors aren't swallowed by `|| true`
+# the way they were in the old `sed | grep | head | sed || true` pipeline.
 get_frontmatter() {
-    local file="$1" field="$2"
-    sed -n '/^---$/,/^---$/p' "$file" | grep -E "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//" || true
+    local file="$1" field="$2" line in_fm=0
+    while IFS= read -r line; do
+        if [[ "$line" == "---" ]]; then
+            in_fm=$((in_fm + 1))
+            [[ $in_fm -eq 2 ]] && return 0
+            continue
+        fi
+        [[ $in_fm -eq 1 ]] || continue
+        if [[ "$line" =~ ^${field}:[[:space:]]*(.*)$ ]]; then
+            printf '%s\n' "${BASH_REMATCH[1]}"
+            return 0
+        fi
+    done < "$file"
 }
 
 lint_skill() {
@@ -164,12 +177,16 @@ lint_skill() {
     # whitespace and an optional '> ' prompt prefix) — that's how skill
     # invocations are written in the Usage code blocks. This avoids
     # false-positives on path components like `/src/auth/`.
+    # `grep -v` exits 1 when nothing prints, which is the success case here
+    # (no bad invocations). Scope `|| true` to just the grep so real failures
+    # in awk / sed / sort propagate via pipefail. Use `grep -Fxv` so $name_val
+    # is treated as a literal whole-line string, not a regex — names with
+    # metacharacters won't corrupt the match.
     local bad_invocations
     bad_invocations="$(awk '/^## Usage/{flag=1; next} /^## /{flag=0} flag' "$readme_md" \
         | sed -nE 's|^[[:space:]]*>?[[:space:]]*(/[a-z][a-z0-9-]+).*$|\1|p' \
         | sort -u \
-        | grep -v "^/$name_val$" \
-        || true)"
+        | { grep -Fxv "/$name_val" || true; })"
     if [[ -n "$bad_invocations" ]]; then
         warn "README Usage references non-self slash commands: $(echo "$bad_invocations" | tr '\n' ' ')"
     else
