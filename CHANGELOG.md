@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-05-14
+
+### Changed
+- Bash function comment headers added/expanded across `install.sh` and `lint.sh` (`docstring-check` audit). `install_skill`, `lint_skill`, and `restore_on_exit` now have block-comment headers documenting purpose, args, return semantics, and side effects (mutated globals `PENDING_TARGET`/`PENDING_BACKUP`, counter mutations `TOTAL_*`, EXIT/INT/TERM trap role). `emit`'s mixed block + inline arg comment collapsed into a single block header that notes the deliberate non-mutation of counters (no summary block in install.sh). The shared `pass`/`fail`/`warn` header now documents the load-bearing `TOTAL_FAIL > 0 → exit 1` contract that was previously implicit. `get_frontmatter`'s header tightened to specify the no-output-on-key-absent return convention and the don't-trim-trailing-whitespace contract. Comment-only — no behavior or output changes.
+
 ## [0.1.0] - 2026-05-14
 
 ### Fixed
@@ -102,7 +107,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
 
-[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.10...v0.1.0
 [0.0.10]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.8...v0.0.9
