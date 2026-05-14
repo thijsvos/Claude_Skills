@@ -16,6 +16,22 @@ else
     GREEN='' YELLOW='' RED='' BOLD='' NC=''
 fi
 
+# Crash safety: if a backup was made but the symlink wasn't recreated (e.g. Ctrl-C
+# between the `mv` and `ln`), restore the backup so the user isn't left empty-handed.
+PENDING_TARGET=""
+PENDING_BACKUP=""
+
+restore_on_exit() {
+    local rc=$?
+    if [[ -n "$PENDING_BACKUP" && -n "$PENDING_TARGET" ]]; then
+        if [[ ! -L "$PENDING_TARGET" && ! -e "$PENDING_TARGET" && -e "$PENDING_BACKUP" ]]; then
+            mv "$PENDING_BACKUP" "$PENDING_TARGET" 2>/dev/null || true
+        fi
+    fi
+    exit "$rc"
+}
+trap restore_on_exit EXIT INT TERM
+
 install_skill() {
     local skill_name="$1"
     local source="$SKILLS_DIR/$skill_name"
@@ -36,16 +52,26 @@ install_skill() {
             return 0
         fi
         echo -e "  ${YELLOW}[update]${NC} $skill_name -- replacing existing symlink (was: $existing_link)"
-        rm "$target"
-    elif [[ -d "$target" ]]; then
-        echo -e "  ${YELLOW}[backup]${NC} $skill_name -- existing directory backed up to ${target}.bak"
-        mv "$target" "${target}.bak"
-    elif [[ -e "$target" ]]; then
-        echo -e "  ${YELLOW}[backup]${NC} $skill_name -- existing file backed up to ${target}.bak"
-        mv "$target" "${target}.bak"
+        # No `rm` needed — `ln -snf` below replaces the symlink atomically.
+    elif [[ -d "$target" || -e "$target" ]]; then
+        # Timestamp the backup so a second run doesn't silently overwrite the first.
+        local bak="${target}.bak"
+        if [[ -e "$bak" || -L "$bak" ]]; then
+            bak="${target}.bak.$(date +%Y%m%d-%H%M%S)"
+        fi
+        local kind="file"
+        [[ -d "$target" ]] && kind="directory"
+        echo -e "  ${YELLOW}[backup]${NC} $skill_name -- existing $kind backed up to $bak"
+        PENDING_TARGET="$target"
+        PENDING_BACKUP="$bak"
+        mv "$target" "$bak"
     fi
 
-    ln -s "$source" "$target"
+    # `ln -snf` atomically replaces an existing symlink and refuses to descend into
+    # a symlink-to-directory (the `-n` flag matters on BSD `ln` for macOS).
+    ln -snf "$source" "$target"
+    PENDING_TARGET=""
+    PENDING_BACKUP=""
     echo -e "  ${GREEN}[installed]${NC} $skill_name -> $source"
 }
 
