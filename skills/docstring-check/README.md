@@ -38,7 +38,7 @@ The key behaviors are **convention-matching** (fixes adopt the project's detecte
 | Model | `opus` |
 | Effort | `max` |
 | Takes argument | Yes (optional: file path, directory, symbol name, branch, commit range, or description) |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 

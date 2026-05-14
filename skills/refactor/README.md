@@ -37,7 +37,7 @@ The key innovation is **cross-cutting synthesis**: changes that improve multiple
 | Model | `opus` |
 | Effort | `max` |
 | Takes argument | Yes (optional: file path, directory, function name, branch, commit range, or description) |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 

@@ -1,7 +1,7 @@
 ---
 name: idiom-check
 description: Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles.
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 ---
@@ -310,6 +310,8 @@ default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@
 [ -z "$default_branch" ] && git rev-parse --verify main >/dev/null 2>&1 && default_branch=main
 [ -z "$default_branch" ] && git rev-parse --verify master >/dev/null 2>&1 && default_branch=master
 ```
+
+**Track progress with tasks.** Before processing the first bundle, call `TaskCreate` once per approved bundle so the user sees live progress through the ship phase. Each task's subject should be the bundle title (`[B1] <title>`). As you start a bundle, mark its task `in_progress`; after the PR is opened, mark it `completed`. If a bundle's commit or push fails, leave the task `in_progress` and report the failure inline.
 
 **Per-bundle workflow** — repeat for each approved bundle:
 

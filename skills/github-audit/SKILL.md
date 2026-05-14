@@ -1,12 +1,12 @@
 ---
 name: github-audit
 description: Audits a GitHub repository against best practices and provides prioritized recommendations for README, license, community health, CI/CD, and repository settings.
-allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, AskUserQuestion, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 ---
 
-**Step 1: Enter Plan Mode immediately using the EnterPlanMode tool before doing anything else.**
+Call `EnterPlanMode` immediately before doing anything else.
 
 You are about to perform a comprehensive audit of this GitHub repository against GitHub best practices. Your goal is to identify what's missing, what's incomplete, and what can be improved — then present a prioritized, actionable list of recommendations.
 
@@ -14,7 +14,7 @@ Execute each phase thoroughly before moving to the next. Use subagents for paral
 
 **Ask the user questions when it would improve the result.** For example: after Phase 1, ask about the project's intended audience (public library vs internal tool vs personal project) since this affects which best practices matter most.
 
-**IMPORTANT: All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"`.** The Explore agent is read-only by design. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.7, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 
 ---
 
@@ -22,7 +22,7 @@ Execute each phase thoroughly before moving to the next. Use subagents for paral
 
 Launch Explore agents in parallel to gather data on all GitHub-relevant aspects of the repository.
 
-**Agent 1: File & Structure Audit**
+### Agent 1: File & Structure Audit
 
 Scan for the presence, location, and quality of these files:
 
@@ -45,7 +45,7 @@ Scan for the presence, location, and quality of these files:
 
 Read each file that exists. Note which are missing entirely.
 
-**Agent 2: README Deep Analysis**
+### Agent 2: README Deep Analysis
 
 If a README exists, evaluate it against these criteria:
 
@@ -61,7 +61,7 @@ If a README exists, evaluate it against these criteria:
 - **Links to documentation** — If there are docs, are they linked?
 - **Contact / support** — How to get help or report issues?
 
-**Agent 3: GitHub Settings & CI/CD**
+### Agent 3: GitHub Settings & CI/CD
 
 Use bash commands to check:
 
@@ -87,26 +87,30 @@ git log --oneline -20 2>/dev/null
 cat .gitignore 2>/dev/null
 ```
 
-If the repo has a GitHub remote, use `gh` CLI to check:
+If the repo has a GitHub remote, use `gh` CLI to check. First resolve the repo slug and default branch so the API paths can be substituted explicitly (`gh api` does not auto-expand `{owner}/{repo}` placeholders):
 
 ```bash
-# Repository metadata
+# Repository metadata (also yields the slug and default branch)
 gh repo view --json name,description,url,homepageUrl,isPrivate,hasIssuesEnabled,hasWikiEnabled,hasDiscussionsEnabled,hasProjectsEnabled,licenseInfo,repositoryTopics,defaultBranchRef,stargazerCount,forkCount 2>/dev/null
 
-# Check if GitHub Pages is enabled
-gh api repos/{owner}/{repo}/pages 2>/dev/null
+# Resolve slug and default branch for the subsequent API calls
+slug=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null)
+default_branch=$(gh repo view --json defaultBranchRef --jq .defaultBranchRef.name 2>/dev/null)
 
-# Check branch protection rules
-gh api repos/{owner}/{repo}/branches/main/protection 2>/dev/null || gh api repos/{owner}/{repo}/branches/master/protection 2>/dev/null
+# Check if GitHub Pages is enabled
+[ -n "$slug" ] && gh api "repos/$slug/pages" 2>/dev/null
+
+# Check branch protection rules on the actual default branch (not a guess of main/master)
+[ -n "$slug" ] && [ -n "$default_branch" ] && gh api "repos/$slug/branches/$default_branch/protection" 2>/dev/null
 
 # Check if Dependabot alerts are enabled
-gh api repos/{owner}/{repo}/vulnerability-alerts 2>/dev/null
+[ -n "$slug" ] && gh api "repos/$slug/vulnerability-alerts" 2>/dev/null
 
 # Check releases
 gh release list --limit 5 2>/dev/null
 
 # Check secrets scanning
-gh api repos/{owner}/{repo}/secret-scanning/alerts --paginate 2>/dev/null | head -5
+[ -n "$slug" ] && gh api "repos/$slug/secret-scanning/alerts" --paginate 2>/dev/null | head -5
 ```
 
 Note: many of these commands may fail on private repos or repos without certain features enabled. That's fine — a failed check is itself a finding.
@@ -207,4 +211,11 @@ Specific, actionable steps. Include example content, commands, or file templates
 
 Aim for 5-10 concrete recommendations. Focus on what would have the most impact for this specific project — not a generic checklist. Consider the project's type, audience, and maturity stage when prioritizing.
 
-**Step 2: After presenting the full audit, exit Plan Mode using the ExitPlanMode tool**, then ask: **"Want me to implement any of these recommendations?"**
+**Skill handoff.** If a recommendation maps cleanly to another installed skill in this collection, suggest invoking it via the `Skill` tool instead of implementing manually. Examples:
+- "Dependencies are stale / no Dependabot configured" → suggest `/dep-check`
+- "No tests" or "test coverage gaps" → suggest `/test-gen`
+- "Missing docstrings on public API" → suggest `/docstring-check`
+- "Code smells / refactoring opportunities surfaced by the audit" → suggest `/refactor`
+- "Ready to ship a fix and you don't have a PR workflow set up" → suggest `/github-ship`
+
+After presenting the full audit, call `ExitPlanMode`, then ask: **"Want me to implement any of these recommendations?"**

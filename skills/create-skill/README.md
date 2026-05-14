@@ -33,7 +33,7 @@ The SKILL.md itself contains a comprehensive **Skill Creation Reference** that d
 | Model | `opus` |
 | Effort | `max` |
 | Takes argument | Yes (optional: description of the skill to create) |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 

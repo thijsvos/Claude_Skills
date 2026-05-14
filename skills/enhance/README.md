@@ -1,16 +1,17 @@
 # Enhance
 
-Deep multi-phase project analysis that identifies and recommends the single most impactful addition to implement.
+Performs deep multi-phase project analysis to identify and recommend the single most impactful addition to implement.
 
 ## What It Does
 
-Runs a strategic 5-phase analysis of your project, then converges on one compelling, concrete recommendation:
+Runs a strategic 6-phase analysis of your project, then converges on one compelling, concrete recommendation:
 
 1. **Deep Project Reconnaissance** -- scans structure, stack, git history, test coverage, and quality gaps
 2. **Project Type Classification** -- categorizes the project (library, CLI, web app, API service, etc.)
 3. **Domain & Context Understanding** -- identifies purpose, target users, maturity stage, and strengths
 4. **Gap & Opportunity Analysis** -- type-specific analysis of what's missing or underexploited
 5. **Innovation Synthesis** -- scores candidates on innovation, feasibility, impact, and delight; picks one winner
+6. **The Recommendation** -- presents the chosen addition with an implementation sketch, then exits plan mode and offers to implement
 
 The skill asks clarifying questions throughout the analysis to tailor its recommendation to your actual priorities and constraints.
 
@@ -38,8 +39,9 @@ The skill automatically:
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
+| Takes argument | No |
 | Disable model invocation | `true` |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, LSP, EnterPlanMode, ExitPlanMode, AskUserQuestion |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, EnterPlanMode, ExitPlanMode, AskUserQuestion |
 
 ## Safety
 

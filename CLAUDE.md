@@ -29,7 +29,7 @@ Every `SKILL.md` must begin with YAML frontmatter between `---` delimiters.
 |-------|---------|-------------|
 | `model` | (inherits) | Model to use: `opus`, `sonnet`, or `haiku` |
 | `effort` | (inherits) | Effort level: `min`, `low`, `medium`, `high`, `max` |
-| `disable-model-invocation` | `false` | Set `true` to prevent the skill from invoking other models |
+| `disable-model-invocation` | `false` | Controls whether other models/skills may auto-invoke this skill via discovery/matching. Set `true` to keep the skill strictly user-triggered (the user must type `/<skill-name>` themselves). Does NOT prevent the skill from launching subagents via the `Agent` tool. Rarely needed — only `enhance` uses this in the current collection. |
 | `takes-arg` | `false` | Set `true` if the skill accepts an argument from the user |
 
 ### SKILL.md Body
@@ -68,8 +68,10 @@ See `skills/enhance/README.md` as the reference implementation.
 ## Quality Standards
 
 - **Minimal permissions**: Only request the tools the skill actually needs in `allowed-tools`
-- **Clear description**: The `description` field should be understandable without reading the full prompt
+- **Clear description**: The `description` field should be understandable without reading the full prompt; verb-first phrasing preferred ("Scans...", "Audits...", "Performs...")
+- **Simplicity bias**: Default to a single linear workflow. Only fan out to subagents when there are three genuinely orthogonal analysis lenses (see `skills/create-skill/SKILL.md` R4 — Subagent Decision Gate). `github-ship` is the canonical example of a subagent-free skill.
 - **Safety-conscious**: Skills that launch subagents should use read-only agent types (e.g., Explore) during analysis phases
+- **Plan-mode discipline**: If a skill enters plan mode, `ExitPlanMode` must be called BEFORE any Edit/Write operation — file modifications are blocked while plan mode is active
 - **Self-contained**: Each skill directory should contain everything needed; avoid cross-skill dependencies
 
 ## Validation

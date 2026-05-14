@@ -1,7 +1,7 @@
 ---
 name: test-gen
 description: Analyzes code to generate comprehensive tests covering happy paths, edge cases, error handling, and integration points, matching the project's existing test conventions.
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 takes-arg: true
@@ -90,6 +90,8 @@ Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: 
 Provide each agent with:
 - The resolved target files from Step 1
 - The project context (manifest, test config, conventions)
+
+**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.7, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 
 **IMPORTANT:** Instruct each agent to read the **full target files** (not just snippets) so they understand the complete code structure, all branches, and how functions relate to each other.
 

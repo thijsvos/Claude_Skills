@@ -6,7 +6,7 @@ Audits a codebase through a programming-language-specific idiom lens, produces a
 
 Where `/code-review` reviews a diff and `/refactor` works against a single target, `/idiom-check` audits the **whole codebase** through a **language-specific** idiom lens. The output is calibrated to the language: a Rust codebase is reviewed for ownership and trait design; a Python codebase for Pythonic constructs and modern type hints; a Go codebase for error-wrapping and channel idioms — and so on.
 
-The skill runs in 5 steps:
+The skill is delivered in 5 steps:
 
 1. **Detect Language and Resolve Scope** — Inspects manifests (`Cargo.toml`, `go.mod`, `pyproject.toml`, `package.json`, `Gemfile`, …), counts source files per language to pick the dominant one, gathers project conventions (`CLAUDE.md`, `.editorconfig`, language-specific lint configs), and narrows the scope when the codebase is large.
 2. **Multi-Lens Language-Specific Analysis** — Launches 3 parallel read-only Opus 4.7 agents, each looking through one of three orthogonal language-specific lenses (e.g. for Rust: Ownership / Type-System / Idioms-&-Control-Flow). Each agent reads the full files in scope, caps findings at ~12, and frames every finding as "why in THIS codebase".
@@ -38,7 +38,7 @@ The skill takes no argument. It always audits the whole repository (with optiona
 | Model | `opus` |
 | Effort | `max` |
 | Takes argument | No |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 

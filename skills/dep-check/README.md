@@ -33,7 +33,7 @@ Performs a comprehensive dependency audit across every ecosystem present in the 
 | Model | `opus` |
 | Effort | `max` |
 | Takes argument | Yes (optional: file path, directory, or ecosystem name) |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 

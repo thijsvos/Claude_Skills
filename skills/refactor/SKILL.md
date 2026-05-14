@@ -1,7 +1,7 @@
 ---
 name: refactor
 description: Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes.
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 takes-arg: true
@@ -330,11 +330,20 @@ After presenting the refactoring plan, call `ExitPlanMode`, then ask:
 
 After the user approves (or modifies) the plan, apply the changes.
 
-**Before making any changes**, if a test runner was detected in Step 1, create a backup:
+**Before making any changes**, capture a backup stash that you can identify reliably later. `git stash push` exits 0 even when there's nothing to stash, so use `git stash create` + `git stash store` to capture an explicit SHA instead:
+
 ```bash
-git stash push -m "refactor-backup: before /refactor changes" 2>/dev/null
+backup_sha=$(git stash create "refactor-backup: before /refactor changes" 2>/dev/null)
+if [ -n "$backup_sha" ]; then
+  git stash store -m "refactor-backup: before /refactor changes" "$backup_sha"
+fi
 ```
-If the stash succeeds (exit code 0 and output is not "No local changes to save"), note that a backup was created. If the repository has uncommitted changes outside the refactoring scope, warn the user before proceeding.
+
+If `$backup_sha` is non-empty, a backup exists at that SHA — record it so a later "revert all" can use `git stash apply "$backup_sha"` (or `git checkout "$backup_sha" -- .`) to restore exactly that snapshot rather than popping whatever stash happens to be on top. If `$backup_sha` is empty, the working tree was clean — proceed without a backup.
+
+If the repository has uncommitted changes outside the refactoring scope, warn the user before proceeding.
+
+**Track progress with tasks.** Before applying the first change, call `TaskCreate` once per selected refactoring (one task per `[R<n>]` finding). The subject should be the finding ID + title (e.g., `[R3] Extract input validation`). Mark `in_progress` when you start the Edit for that finding and `completed` after it's applied. Refactoring plans regularly have 10-30 findings; this keeps the user oriented through the execution phase.
 
 **Execution rules:**
 
@@ -362,7 +371,7 @@ If the stash succeeds (exit code 0 and output is not "No local changes to save")
    >
    > Options:
    > - "revert R4" — undo just that change
-   > - "revert all" — restore to pre-refactoring state (`git stash pop`)
+   > - "revert all" — restore to pre-refactoring state (`git stash apply "$backup_sha"` against the SHA captured before Step 4)
    > - "fix it" — attempt to fix the failing test while preserving the refactoring intent
 
 8. **If no test runner is available:**

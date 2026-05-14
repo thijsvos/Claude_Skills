@@ -72,6 +72,12 @@ lint_skill() {
         fail "Missing required field: description"
     else
         pass "Has 'description' field"
+        # Description should end with a period
+        if [[ "$desc_val" == *"." ]]; then
+            pass "description ends with a period"
+        else
+            warn "description does not end with a period"
+        fi
     fi
 
     local tools_val
@@ -80,6 +86,41 @@ lint_skill() {
         fail "Missing required field: allowed-tools"
     else
         pass "Has 'allowed-tools' field"
+    fi
+
+    # Check plan-mode discipline: if EnterPlanMode is present, ExitPlanMode must be too
+    if [[ "$tools_val" == *"EnterPlanMode"* ]]; then
+        if [[ "$tools_val" == *"ExitPlanMode"* ]]; then
+            pass "EnterPlanMode and ExitPlanMode are paired in allowed-tools"
+        else
+            fail "EnterPlanMode declared without ExitPlanMode in allowed-tools"
+        fi
+    fi
+
+    # Check that the body calls both EnterPlanMode and ExitPlanMode if either is in tools
+    if [[ "$tools_val" == *"EnterPlanMode"* ]]; then
+        if grep -q "EnterPlanMode" "$skill_md"; then
+            pass "body references EnterPlanMode"
+        else
+            fail "EnterPlanMode in allowed-tools but never referenced in body"
+        fi
+        if grep -q "ExitPlanMode" "$skill_md"; then
+            pass "body references ExitPlanMode"
+        else
+            fail "ExitPlanMode in allowed-tools but never referenced in body"
+        fi
+    fi
+
+    # If multi-agent (Agent in tools and body launches subagents), require the IMPORTANT block
+    if [[ "$tools_val" == *"Agent"* ]]; then
+        if grep -qE 'subagent_type:[[:space:]]*"?Explore"?' "$skill_md"; then
+            # Body uses Explore subagents — must include the canonical IMPORTANT block
+            if grep -q 'subagents MUST be launched with' "$skill_md"; then
+                pass "IMPORTANT subagent block present"
+            else
+                warn "Agent + Explore subagents used but canonical IMPORTANT block missing"
+            fi
+        fi
     fi
 
     # Check README.md exists
@@ -104,6 +145,66 @@ lint_skill() {
         pass "README has section: Safety"
     else
         warn "README has no Safety section (optional)"
+    fi
+
+    # README first line description should match SKILL.md description
+    # (skip the "# Title" heading — line 3 is the description in the README template)
+    local readme_desc
+    readme_desc="$(sed -n '3p' "$readme_md")"
+    if [[ -n "$desc_val" && -n "$readme_desc" ]]; then
+        if [[ "$readme_desc" == "$desc_val" ]]; then
+            pass "README description matches SKILL.md description"
+        else
+            warn "README line 3 description differs from SKILL.md description"
+        fi
+    fi
+
+    # Usage section examples should invoke /<name>, not /<some-other-name>.
+    # Only inspect lines that START with /<token> (after optional leading
+    # whitespace and an optional '> ' prompt prefix) — that's how skill
+    # invocations are written in the Usage code blocks. This avoids
+    # false-positives on path components like `/src/auth/`.
+    local bad_invocations
+    bad_invocations="$(awk '/^## Usage/{flag=1; next} /^## /{flag=0} flag' "$readme_md" \
+        | sed -nE 's|^[[:space:]]*>?[[:space:]]*(/[a-z][a-z0-9-]+).*$|\1|p' \
+        | sort -u \
+        | grep -v "^/$name_val$" \
+        || true)"
+    if [[ -n "$bad_invocations" ]]; then
+        warn "README Usage references non-self slash commands: $(echo "$bad_invocations" | tr '\n' ' ')"
+    else
+        pass "README Usage examples reference /$name_val correctly"
+    fi
+
+    # Configuration table should include Takes argument and Allowed tools rows
+    if grep -qE '\|[[:space:]]*Takes argument[[:space:]]*\|' "$readme_md"; then
+        pass "Configuration table has 'Takes argument' row"
+    else
+        warn "Configuration table missing 'Takes argument' row"
+    fi
+    if grep -qE '\|[[:space:]]*Allowed tools[[:space:]]*\|' "$readme_md"; then
+        pass "Configuration table has 'Allowed tools' row"
+    else
+        fail "Configuration table missing 'Allowed tools' row"
+    fi
+
+    # allowed-tools in SKILL.md frontmatter == Allowed tools row in README Configuration table
+    if [[ -n "$tools_val" ]]; then
+        local readme_tools
+        readme_tools="$(grep -E '\|[[:space:]]*Allowed tools[[:space:]]*\|' "$readme_md" \
+            | head -1 \
+            | sed -E 's/^\|[[:space:]]*Allowed tools[[:space:]]*\|[[:space:]]*//' \
+            | sed -E 's/[[:space:]]*\|[[:space:]]*$//' \
+            | tr -d '`')"
+        # Normalize whitespace and trailing spaces
+        local norm_skill_tools norm_readme_tools
+        norm_skill_tools="$(echo "$tools_val" | tr -d '[:space:]')"
+        norm_readme_tools="$(echo "$readme_tools" | tr -d '[:space:]')"
+        if [[ "$norm_skill_tools" == "$norm_readme_tools" ]]; then
+            pass "Allowed tools row matches SKILL.md allowed-tools"
+        else
+            warn "Allowed tools row in README does not match SKILL.md allowed-tools frontmatter"
+        fi
     fi
 }
 

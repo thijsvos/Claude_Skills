@@ -1,13 +1,13 @@
 ---
 name: enhance
-description: Deep multi-phase project analysis that identifies and recommends the single most impactful addition to implement. Runs in plan mode for analysis, then exits for implementation.
+description: Performs deep multi-phase project analysis to identify and recommend the single most impactful addition to implement.
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, LSP, EnterPlanMode, ExitPlanMode, AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, EnterPlanMode, ExitPlanMode, AskUserQuestion
 model: opus
 effort: max
 ---
 
-**Step 1: Enter Plan Mode immediately using the EnterPlanMode tool before doing anything else.**
+Call `EnterPlanMode` immediately before doing anything else.
 
 You are about to perform a deep, multi-phase analysis of the current project to identify and recommend THE single most impactful, innovative addition you can make. This is not a code review or a list of improvements — it's a strategic deep-dive that culminates in one compelling, concrete recommendation.
 
@@ -15,7 +15,7 @@ Execute each phase thoroughly before moving to the next. Use subagents for paral
 
 **Ask the user questions at any point during the analysis when it would improve the result.** Don't make assumptions about priorities, pain points, or goals when you can ask. Examples: after Phase 1, ask what areas matter most to them; during Phase 3, confirm which problems they actually feel; before Phase 4, ask if there are constraints or preferences you should know about. The goal is a recommendation tailored to what the user needs right now, not a generic suggestion.
 
-**IMPORTANT: All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"`.** The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override is required because Explore defaults to Haiku, which is too shallow for this skill's deep analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.7, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 
 ---
 
@@ -65,7 +65,7 @@ Compile your findings into a mental model of the project before proceeding.
 
 ---
 
-## Phase 1.5: Project Type Classification
+## Phase 2: Project Type Classification
 
 Based on Phase 1 findings, classify the project as one of:
 - **Library/Package** — consumed by other developers as a dependency
@@ -75,11 +75,11 @@ Based on Phase 1 findings, classify the project as one of:
 - **Infrastructure/DevOps** — IaC, CI/CD tooling, platform config
 - **Other** — describe it
 
-State the classification clearly before proceeding. This classification shapes the analysis in Phase 3.
+State the classification clearly before proceeding. This classification shapes the analysis in Phase 4.
 
 ---
 
-## Phase 2: Domain & Context Understanding
+## Phase 3: Domain & Context Understanding
 
 Based on Phase 1, synthesize a deeper understanding:
 
@@ -94,7 +94,7 @@ Summarize this understanding briefly before moving on.
 
 ---
 
-## Phase 3: Gap & Opportunity Analysis
+## Phase 4: Gap & Opportunity Analysis
 
 Now think critically about what's missing or underexploited:
 
@@ -106,7 +106,7 @@ Now think critically about what's missing or underexploited:
 - What's the **weakest link** in the project's value chain?
 - What's the **biggest risk** the project currently faces (technical debt, scalability, security, DX)?
 
-**Additionally, ask these type-specific questions based on the Phase 1.5 classification:**
+**Additionally, ask these type-specific questions based on the Phase 2 classification:**
 
 - **Library/Package** — API ergonomics? Documentation and examples quality? Bundle size / tree-shaking? Backwards compatibility strategy? Publishing pipeline?
 - **CLI Tool** — UX and help text quality? Shell completions? Config file support? Error messages and exit codes? Interactive vs non-interactive mode?
@@ -118,7 +118,7 @@ Generate a broad list of potential improvements and opportunities. Don't filter 
 
 ---
 
-## Phase 4: Innovation Synthesis
+## Phase 5: Innovation Synthesis
 
 Now converge. This is the creative, strategic phase:
 
@@ -137,7 +137,7 @@ Score each candidate idea on four axes:
 
 ---
 
-## Phase 5: The Recommendation
+## Phase 6: The Recommendation
 
 Present your recommendation in this format:
 
@@ -170,6 +170,6 @@ Briefly mention 2-3 runner-up ideas and why this one wins.
 
 ---
 
-**Step 2: After presenting the full recommendation, exit Plan Mode using the ExitPlanMode tool**, then ask: **"Want me to implement this now?"**
+After presenting the full recommendation, call `ExitPlanMode`, then ask: **"Want me to implement this now?"**
 
 This way the user can immediately proceed with implementation in the same session.

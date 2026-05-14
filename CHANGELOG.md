@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+- `dep-check`: `ExitPlanMode` was called AFTER Step 4 attempted manifest edits, which made the apply phase unreachable while plan mode was still active. Moved the call to the end of Step 3 (before the action offer).
+- `diagnose` README: every Usage example invoked `/debug` (the pre-rename name), which would either fail or hit a different built-in command. Replaced with `/diagnose`.
+- `github-audit`: several `gh api repos/{owner}/{repo}/...` calls relied on placeholder substitution that `gh api` does not perform, returning 404 at runtime. Now resolves `nameWithOwner` and the default branch explicitly via `gh repo view` and substitutes them into each subsequent API call.
+- `github-ship`: the PR-body heredoc used an unquoted `<<EOF` delimiter, allowing `$variable`, backtick, and `$(...)` expansion inside the body — a shell-substitution injection risk if the body included quoted code snippets. Switched to a quoted `<<'EOF'` body with `$issue_number` interpolated separately, piped via `--body-file -`.
+- `github-ship`: branch cleanup unconditionally deleted the remote branch even after the user declined a force-delete on the local one. Remote delete is now gated on local-delete success or explicit user approval.
+- `diagnose`: shell snippets contained literal placeholders (`<id>`, `<error_file_1>`, `<error_file_N>`, `<error_keywords>`) that would be passed unchanged if the model didn't pattern-match. Replaced with explicit `jq` extraction (`run_id`, `commit_hash`) and per-path loops.
+- `refactor` and `docstring-check`: pre-change backup used `git stash push`, which exits 0 even when there's nothing to stash — a later `git stash pop` could pop an unrelated stash. Switched to `git stash create` + `git stash store` so the backup is captured by SHA.
+- `dep-check`: Step 4 mixed "run `npm install <package>@<version>`" guidance with a "do NOT run install commands" rule. Now consistently edits manifests via `Edit` and instructs the user to run install/test themselves. Version/package arguments in suggested commands are quoted.
+
+### Changed
+- **Meta-skill overhaul (`create-skill`).** R4 (Subagents) now defaults to NO subagents and adds a Decision Gate: skills only fan out to 3 Explore agents when there are three genuinely orthogonal analysis lenses. This aligns the meta-skill with the project's simplicity bias (e.g., `github-ship`). R2 (Tool Selection) now documents modern primitives — `TaskCreate`/`TaskUpdate`, `Monitor`, `Skill`, `CronCreate`, `LSP` — and when to add each. Step 1 now batches the structured questions into an explicit `AskUserQuestion` call. R11 codifies "delivered in N steps" wording and verbatim-match between SKILL.md description and README first line.
+- **`CLAUDE.md`**: clarified `disable-model-invocation` semantics (controls auto-invocation by other models/skills, does NOT block subagents); added Simplicity Bias and Plan-Mode Discipline to Quality Standards.
+- **Templates** (`templates/SKILL.md`, `templates/README.md`): regenerated to reflect canonical opening line, default tool set (no `Agent` by default), and full Configuration table including `Takes argument`.
+- **Consistency pass.** `enhance` and `github-audit` SKILL.md now use the canonical `` Call `EnterPlanMode` immediately before doing anything else. `` opening (was an older "Step 1: Enter Plan Mode..." phrasing). `github-audit` agent subheadings switched from bold inline text to `### Agent N:`. `enhance`, `github-audit`, `test-gen`, `code-review` now carry the full canonical IMPORTANT subagent block (Explore + Opus + safety reasoning). `enhance` SKILL.md phases renumbered to 1-6 (was 1, 1.5, 2-5); README phase list updated to match. `enhance` description shortened to one sentence and aligned across SKILL.md / README / root README. `enhance` allowed-tools no longer declares `LSP` (was unused).
+- **Configuration tables** in all skill READMEs now list the exact same tools as the SKILL.md `allowed-tools` frontmatter (previously some omitted `EnterPlanMode`/`ExitPlanMode`). `github-audit` and `enhance` READMEs gained the `Takes argument | No` row.
+- **`test-gen`** allowed-tools gained `AskUserQuestion` (the skill prompts the user mid-flow); SKILL.md gained the canonical IMPORTANT subagent block.
+
+### Added
+- **Modern primitives wired into looping skills.** `idiom-check`, `dep-check`, `docstring-check`, and `refactor` now use `TaskCreate`/`TaskUpdate` during their execution phases so the user sees live progress through multi-unit work (one task per bundle / update group / file / refactoring finding). `TaskCreate, TaskUpdate` added to each skill's `allowed-tools`.
+- **`github-audit`** can now hand off to other installed skills via the `Skill` tool when a recommendation maps cleanly to another skill (e.g., dependency hygiene → `/dep-check`). `Skill` added to allowed-tools.
+- **`dep-check`** Step 2 now mandates parallel `Bash` tool calls for the per-ecosystem `outdated`/`audit`/`list` sweep, with `timeout 60` per command and explicit recording of which invocations timed out vs were unavailable vs returned empty.
+- **`lint.sh`** gained 6+ new regression-prevention checks: description ends with a period; matched `EnterPlanMode`/`ExitPlanMode` pairs in frontmatter and body references; canonical IMPORTANT subagent block presence when `Agent` is used with Explore subagents; README line 3 matches SKILL.md description; Usage examples invoke the correct `/<name>`; Configuration table includes `Takes argument` and `Allowed tools` rows; allowed-tools parity between SKILL.md frontmatter and README Configuration table.
+
 ## [0.0.10] - 2026-04-25
 
 ### Added

@@ -1,7 +1,7 @@
 ---
 name: docstring-check
 description: Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies behavior-preserving fixes matching the project's detected convention.
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 takes-arg: true
@@ -364,11 +364,20 @@ After presenting the plan, call `ExitPlanMode`, then ask:
 
 After the user approves (or modifies) the plan, apply the changes.
 
-**Before making any changes**, create a backup if the working tree has modifications or the repo tracks these files:
+**Before making any changes**, capture a backup stash that you can identify reliably later. `git stash push` exits 0 even when there's nothing to stash, so use `git stash create` + `git stash store` to capture an explicit SHA instead:
+
 ```bash
-git stash push -m "docstring-check-backup: before /docstring-check changes" 2>/dev/null
+backup_sha=$(git stash create "docstring-check-backup: before /docstring-check changes" 2>/dev/null)
+if [ -n "$backup_sha" ]; then
+  git stash store -m "docstring-check-backup: before /docstring-check changes" "$backup_sha"
+fi
 ```
-If the stash succeeds (exit code 0 and output is not "No local changes to save"), note that a backup was created. If the repository has uncommitted changes outside the docstring fix scope, warn the user before proceeding.
+
+If `$backup_sha` is non-empty, a backup exists at that SHA — record it so a later "revert all" can use `git stash apply "$backup_sha"` to restore exactly that snapshot. If `$backup_sha` is empty, the working tree was clean — proceed without a backup.
+
+If the repository has uncommitted changes outside the docstring fix scope, warn the user before proceeding.
+
+**Track progress with tasks.** Before applying the first fix, call `TaskCreate` once per file touched by the selected findings (one task per file, batching the findings within that file into the task description). Mark `in_progress` when you begin editing the file and `completed` once all its findings are applied. For large plans (20+ files) this gives the user a real-time view of how many files are left and which one is currently being edited.
 
 **Execution rules:**
 
@@ -417,7 +426,7 @@ If the stash succeeds (exit code 0 and output is not "No local changes to save")
    >
    > Options:
    > - "revert D4" — undo just that change
-   > - "revert all" — restore to pre-fix state (`git stash pop`)
+   > - "revert all" — restore to pre-fix state (`git stash apply "$backup_sha"` against the SHA captured before Step 4)
    > - "fix it" — attempt to correct the proposed docstring while preserving the fix intent
 
 9. **If no verification tool is available**, instruct the user:

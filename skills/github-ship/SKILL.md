@@ -135,18 +135,17 @@ After approval, execute in order. If any step fails, stop and report.
    issue_number=$(echo "$issue_url" | grep -oE '[0-9]+$')
    ```
 
-5. Create the PR:
+5. Create the PR. Build the body with `Closes #$issue_number` interpolated into the first line, but use a quoted heredoc (`<<'EOF'`) for the rest so that any `$`, backtick, or `$(...)` sequences inside the bullets or checklist are treated as literal text (no shell substitution):
    ```bash
-   gh pr create --base "$default_branch" --title "<pr title>" --body "$(cat <<EOF
-   Closes #$issue_number
-
+   pr_body=$(printf 'Closes #%s\n\n' "$issue_number"; cat <<'EOF'
    ## Summary
    <bullets>
 
    ## Test plan
    <checklist>
    EOF
-   )"
+   )
+   printf '%s\n' "$pr_body" | gh pr create --base "$default_branch" --title "<pr title>" --body-file -
    ```
 
 6. Report:
@@ -194,21 +193,32 @@ After approval:
 ```bash
 git checkout "$default_branch"
 git pull --ff-only
-git branch -d "$current_branch" 2>&1
 ```
 
-If `git branch -d` refuses with "not fully merged" (normal for squash-merged or rebase-merged PRs), ask inline:
+Try the safe local delete. Capture the exit code — do NOT proceed to remote delete unless local delete succeeded or the user explicitly approves the force-delete:
+
+```bash
+if git branch -d "$current_branch" 2>&1; then
+  local_deleted=yes
+else
+  local_deleted=no
+fi
+```
+
+If `local_deleted=no` (normal for squash-merged or rebase-merged PRs), ask inline:
 
 > Local branch has commits not on `<default>`. This is normal for squash/rebase merges. Force-delete? (yes/no)
 
-If yes:
+If the user answers yes:
 ```bash
-git branch -D "$current_branch"
+git branch -D "$current_branch" && local_deleted=yes
 ```
 
-Then delete the remote branch if it still exists:
+If the user answers no, stop here — do NOT delete the remote branch. The user can rerun the skill after sorting the branch out, or delete it manually.
+
+Only after `local_deleted=yes`, delete the remote branch if it still exists:
 ```bash
-if git ls-remote --heads origin "$current_branch" | grep -q .; then
+if [ "$local_deleted" = "yes" ] && git ls-remote --heads origin "$current_branch" | grep -q .; then
   git push origin --delete "$current_branch"
 fi
 ```
