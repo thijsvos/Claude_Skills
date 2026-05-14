@@ -132,6 +132,7 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 - **Propose a skill**: [open a Skill Request](https://github.com/thijsvos/Claude_Skills/issues/new?template=skill_request.yml)
 - **Report a bug**: [open a Bug Report](https://github.com/thijsvos/Claude_Skills/issues/new?template=bug_report.yml)
 - **Security issues**: see [SECURITY.md](SECURITY.md)
+- **Community standards**: see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 ## License
 

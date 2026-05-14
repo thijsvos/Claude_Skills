@@ -1,13 +1,24 @@
 .DS_Store
 ._*
+Thumbs.db
 *.swp
 *.swo
 *~
 .vscode/
 .idea/
-.claude/
+# Per-user Claude Code config only — the project-level `.claude/` directory
+# is tracked. Adding the whole `.claude/` here would silently swallow new
+# tracked files added under it.
+.claude/local/
+.claude/settings.local.json
 *.bak
 .env*
 *.log
 node_modules/
 __pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+venv/
+.venv/

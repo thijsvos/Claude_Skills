@@ -10,6 +10,10 @@ Claude Code skills are prompt-based extensions that can request access to powerf
 
 **Users should review any skill's `SKILL.md` before installing it**, paying particular attention to the `allowed-tools` field and the prompt content.
 
+## Supported Versions
+
+This repo is forward-only: skills are distributed via symlinks from the latest tag/`main`, so security fixes land in whichever release is current. Only the latest tagged release (see [CHANGELOG.md](CHANGELOG.md)) receives security fixes. To pick up patches, run `git pull` in the cloned repo — your symlinks update automatically.
+
 ## Reporting a Vulnerability
 
 If you discover a security issue in a skill (e.g., a skill that exfiltrates data, executes unintended commands, or requests excessive permissions), please report it responsibly:
@@ -17,7 +21,7 @@ If you discover a security issue in a skill (e.g., a skill that exfiltrates data
 1. **Do not open a public issue.** Security vulnerabilities should be reported privately.
 2. **Use [GitHub Security Advisories](https://github.com/thijsvos/Claude_Skills/security/advisories/new)** to report the issue privately.
 
-You should receive an acknowledgment within 48 hours and a resolution timeline within 7 days.
+This is a maintainer-led project, so response times are best-effort: we aim to acknowledge reports within 7 days and provide a resolution timeline within 30 days. Critical issues are prioritized.
 
 ## What Counts as a Security Issue
 

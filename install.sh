@@ -54,7 +54,13 @@ restore_on_exit() {
     local rc=$?
     if [[ -n "$PENDING_BACKUP" && -n "$PENDING_TARGET" ]]; then
         if [[ ! -L "$PENDING_TARGET" && ! -e "$PENDING_TARGET" && -e "$PENDING_BACKUP" ]]; then
-            mv "$PENDING_BACKUP" "$PENDING_TARGET" 2>/dev/null || true
+            # Loud failure: if the rollback itself fails, the user must know
+            # the backup is still at the .bak path — otherwise they'll think
+            # the install completed and lose track of the recovery file.
+            if ! mv "$PENDING_BACKUP" "$PENDING_TARGET"; then
+                printf 'WARNING: failed to restore %s from %s; backup left in place\n' \
+                    "$PENDING_TARGET" "$PENDING_BACKUP" >&2
+            fi
         fi
     fi
     exit "$rc"

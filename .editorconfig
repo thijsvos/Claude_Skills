@@ -11,5 +11,13 @@ insert_final_newline = true
 [*.sh]
 indent_size = 4
 
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.md]
+indent_size = 2
+# Markdown uses two trailing spaces as a hard line break — preserve them.
+trim_trailing_whitespace = false
+
 [Makefile]
 indent_style = tab
