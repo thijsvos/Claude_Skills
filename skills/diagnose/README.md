@@ -4,7 +4,7 @@ Multi-agent root cause analysis that traces errors, correlates with recent chang
 
 ## What It Does
 
-Performs structured debugging through parallel investigation, delivered in 3 steps:
+Performs structured root cause analysis through parallel investigation, delivered in 3 steps:
 
 1. **Problem Parsing** -- classifies the input (stack trace, error message, file path, or natural language description) and identifies the error type, affected files, and language/framework context. If no argument is provided, auto-detects recent test or CI failures.
 2. **Parallel Investigation** -- launches 3 parallel agents: Error Trace Analysis (follows the call chain backward to find where behavior diverges from intent), Change Correlation (checks recent git history for commits that could have introduced the bug), and Pattern & Context Analysis (searches for similar issues in the codebase and known issues online)
@@ -19,10 +19,10 @@ Performs structured debugging through parallel investigation, delivered in 3 ste
 ## Usage
 
 ```
-/debug TypeError: Cannot read properties of undefined (reading 'map')
-/debug "the login page redirects to 404 after submitting"
-/debug src/auth/handler.ts
-/debug                                    # Auto-detect: check recent test/CI failures
+/diagnose TypeError: Cannot read properties of undefined (reading 'map')
+/diagnose "the login page redirects to 404 after submitting"
+/diagnose src/auth/handler.ts
+/diagnose                                 # Auto-detect: check recent test/CI failures
 ```
 
 ## Configuration
@@ -32,7 +32,7 @@ Performs structured debugging through parallel investigation, delivered in 3 ste
 | Model | `opus` |
 | Effort | `max` |
 | Takes argument | Yes (optional: error message, stack trace, file path, or description) |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 

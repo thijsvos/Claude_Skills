@@ -1,7 +1,7 @@
 ---
 name: dep-check
 description: Scans all dependency declarations across ecosystems, checks for updates and vulnerabilities, and produces a prioritized update plan with testing recommendations.
-allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 takes-arg: true
@@ -90,6 +90,8 @@ Provide each agent with the complete list of discovered manifest files, their fu
 ### Agent 1: Application Dependencies — Package Manager Updates
 
 For each package manager ecosystem detected, check every dependency for available updates.
+
+**IMPORTANT — issue commands in parallel.** When checking multiple ecosystems, the per-ecosystem `outdated`/`audit`/`list` commands are independent and should be issued as **parallel `Bash` tool calls in a single response** (one tool-call block, multiple `Bash` entries). Sequential execution serializes 8+ commands that each take 10-60 seconds and inflates wall-clock time without improving accuracy. Wrap each command with `timeout 60 ...` so a slow/hanging tool doesn't block the rest of the sweep, and record which invocations timed out vs which were unavailable vs which returned empty results.
 
 **Use CLI tools when available (preferred — faster and more accurate):**
 
@@ -403,46 +405,35 @@ If applicable: To check these, install `<tool>` and re-run, or run: `<manual com
 5. **Major updates** — ordered by migration effort (easiest first)
 6. **CI/CD and infrastructure** — Actions, Docker, Terraform versions
 
+After the report is presented, call `ExitPlanMode`.
+
 ---
 
 ## Step 4: Offer to Apply Updates
 
-After presenting the report, if there are any updates available, ask:
+If there are any updates available, ask:
 
 > **Want me to apply any of these updates?** (e.g., "apply all", "apply group 1", "apply security patches only", "apply V1 and V3")
 
-If the user requests updates:
+If the user requests updates, apply them by **editing the manifest files in place** — do not run any install/network commands. The user runs install/test themselves after reviewing the diff.
+
+**Track progress with tasks.** Before applying the first update, call `TaskCreate` once per approved update group so the user sees live progress through Step 4. Each task's subject should be the group title (e.g., `Group 1: Security patches`). Mark a task `in_progress` when you begin the group's edits and `completed` once all manifests in that group have been edited.
 
 1. Apply updates group by group in the order specified.
-2. For package manager updates, use the appropriate CLI command:
-   ```bash
-   # npm
-   npm install <package>@<version>
-
-   # Python (requirements.txt) — edit the version pin directly
-   # Python (pyproject.toml / Pipfile) — edit the version constraint
-
-   # Rust
-   cargo update -p <package>
-
-   # Go
-   go get <module>@<version>
-
-   # Ruby
-   bundle update <gem>
-
-   # PHP
-   composer require <package>:<version>
-   ```
-3. For CI/CD and infrastructure updates, use the Edit tool to modify version pins in the relevant files.
+2. For each manifest, use the `Edit` tool to bump the version constraint to the target version. Examples (the literal text in your `old_string`/`new_string` will match each ecosystem's manifest syntax):
+   - **npm/yarn/pnpm** — bump the version in `package.json` `dependencies` / `devDependencies`.
+   - **Python `requirements.txt`** — replace `<package>==<old>` with `<package>==<new>`.
+   - **Python `pyproject.toml` / `Pipfile`** — bump the version constraint.
+   - **Rust** — bump the version in `Cargo.toml` `[dependencies]`. (A subsequent `cargo update -p "<package>"` is something the user runs to refresh `Cargo.lock`.)
+   - **Go** — bump the version in `go.mod` `require`. (User runs `go get "<module>@<version>"` afterward to refresh `go.sum`.)
+   - **Ruby** — bump the version in `Gemfile`. (User runs `bundle update "<gem>"` to refresh `Gemfile.lock`.)
+   - **PHP** — bump the version in `composer.json` `require`. (User runs `composer update "<package>"` to refresh `composer.lock`.)
+   - **.NET** — bump the version in the `.csproj` `<PackageReference Version="..." />`.
+3. For CI/CD and infrastructure updates (GitHub Actions `uses:`, Docker `FROM`, Terraform `version`, pre-commit `rev:`), use `Edit` to modify the version pin in the relevant file.
 4. After applying each group, show a summary of what changed:
-   > **Applied Group 1**: Updated 3 packages in `package.json`. Run `<test command>` to verify.
-5. Do NOT run install commands (`npm install`, `pip install`, etc.) or test commands automatically — only update the version declarations in the manifest files. Tell the user what commands to run:
-   > I've updated the version declarations. Run `<install command>` to install the new versions, then `<test command>` to verify.
+   > **Applied Group 1**: Updated 3 packages in `package.json`. Run `<install command>` then `<test command>` to verify.
+5. Do **not** run install commands (`npm install`, `pip install`, `cargo update`, `bundle install`, etc.) or test commands automatically. Once you've finished editing manifests, tell the user what to run. Always quote `<package>` and `<version>` arguments in the commands you suggest, since version constraints can contain shell metacharacters like `<`, `>`, and spaces:
+   > I've updated the version declarations. Run `npm install` (or `cargo update -p "<package>"`, `bundle update "<gem>"`, `composer update "<package>"`, etc. — quote the package/version) to refresh lockfiles and install the new versions, then `<test command>` to verify.
 
 If the report shows zero updates and zero vulnerabilities, skip the update offer:
 > All dependencies are up to date and no known vulnerabilities were found.
-
----
-
-Once the report is presented (and any requested updates are applied), call `ExitPlanMode`.

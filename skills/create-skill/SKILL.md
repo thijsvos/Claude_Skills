@@ -34,7 +34,7 @@ Every `SKILL.md` must begin with YAML frontmatter between `---` delimiters.
 | Field | Rule |
 |-------|------|
 | `name` | Must match the directory name exactly (e.g., `my-skill` for `skills/my-skill/`) |
-| `description` | One-line summary of what the skill does, ending with a period |
+| `description` | One-line summary, **verb-first** ("Scans...", "Audits...", "Performs..."), ending with a period. Treat this as the marketing copy — it's what shows up in `/help` and the root README. |
 | `allowed-tools` | Comma-separated list of tools the skill may use |
 
 **Standard fields** (used by every existing skill):
@@ -49,7 +49,7 @@ Every `SKILL.md` must begin with YAML frontmatter between `---` delimiters.
 | Field | Default | When to use |
 |-------|---------|-------------|
 | `takes-arg` | `false` | Set `true` if the skill accepts a user argument |
-| `disable-model-invocation` | `false` | Set `true` to prevent invoking other models (rare — only `enhance` uses this) |
+| `disable-model-invocation` | `false` | Controls whether other models/skills may auto-invoke this skill via discovery/matching. Set `true` to keep the skill strictly user-triggered (the user must type `/<skill-name>` themselves). This does NOT prevent the skill from launching subagents via the `Agent` tool. Rarely needed — only `enhance` uses this in the current collection, to avoid being matched as a generic "improve the project" trigger. |
 
 ---
 
@@ -57,25 +57,36 @@ Every `SKILL.md` must begin with YAML frontmatter between `---` delimiters.
 
 Follow the **minimal permissions principle** — only request tools the skill actually needs.
 
-**Base set (every skill includes these):**
+**Base set (every skill that uses plan mode includes these):**
 ```
-Read, Grep, Glob, Bash, Agent, EnterPlanMode, ExitPlanMode
+Read, Grep, Glob, Bash, EnterPlanMode, ExitPlanMode
 ```
+
+Add `Agent` only if the skill genuinely fans out to subagents (see R4 — default is NO subagents).
 
 **Add based on capability:**
 
 | Capability needed | Add these tools |
 |-------------------|----------------|
+| Launch parallel analysis subagents | `Agent` (only if R4's decision gate passes) |
 | Modify existing files | `Edit` |
 | Create new files | `Write` |
 | Internet access (web search, API lookups) | `WebSearch, WebFetch` |
 | Ask the user questions during execution | `AskUserQuestion` |
+| Track progress through a long multi-step execution phase | `TaskCreate, TaskUpdate` (optionally `TaskList`) |
+| Stream output from a long-running background process | `Monitor` (paired with `Bash` using `run_in_background`) |
+| Hand off to or invoke another installed skill | `Skill` |
+| Schedule recurring or one-off future runs | `CronCreate, CronList, CronDelete` (or `ScheduleWakeup` for in-conversation waits) |
+| Read symbol references / definitions via the language server | `LSP` |
 
 **Decision tree:**
 - Does the skill only analyze/report? → Base set only (+ `AskUserQuestion` if it needs to clarify scope)
 - Does the skill modify existing files after analysis? → Add `Edit`
 - Does the skill create new files? → Add `Write`
 - Does the skill need to look up external information? → Add `WebSearch, WebFetch`
+- Does the execution phase loop through many independent units of work (multiple PRs, file edits, update groups)? → Add `TaskCreate, TaskUpdate` for live progress visibility
+- Does the skill spawn long-running shell commands (slow test suites, deploys) where polling output makes sense? → Pair `Bash` (`run_in_background: true`) with `Monitor`
+- Does the skill naturally chain into another `/skill` for follow-up work? → Add `Skill`
 
 ---
 
@@ -117,11 +128,19 @@ Not every skill needs all 4 steps. Analysis-only skills may have 3 steps. Skills
 
 ---
 
-### R4: Subagents
+### R4: Subagents (optional — default NO)
 
-Skills that perform multi-dimensional analysis launch **exactly 3 Explore subagents in parallel**.
+**Default to NO subagents.** Many useful skills work as a single linear workflow without delegating to parallel investigators. `github-ship` is the strongest example of this pattern in the collection — it's a deterministic state-detect → present-plan → execute flow with no agent fan-out, and it's all the better for it.
 
-**Configuration (mandatory):**
+**Decision gate.** Before adding subagents, ask out loud:
+
+> *"What three orthogonal dimensions does this skill analyze?"*
+
+If you can't name three independent lenses that genuinely benefit from parallel investigation, **do not add subagents** — put the work directly in the skill body. Three near-duplicate "agents" that all read the same files and produce overlapping findings is the failure mode the simplicity bias exists to prevent.
+
+If the answer is yes — three genuinely orthogonal lenses (e.g., `code-review`'s correctness / security / performance / conventions split, or `refactor`'s correctness-security / performance / structure split) — then proceed with the rest of this rule.
+
+**Configuration (mandatory when using subagents):**
 ```
 subagent_type: "Explore"
 model: "opus"
@@ -293,11 +312,13 @@ When combining findings from multiple agents, the synthesis step must follow the
 
 Every skill's `README.md` must contain these sections **in this order**:
 
-1. **Title** — `# <Skill Name>` followed by a one-line description
-2. **What It Does** — describe the workflow and phases
+1. **Title** — `# <Skill Name>` followed by a one-line description that matches the SKILL.md `description` field verbatim.
+2. **What It Does** — describe the workflow and phases. The intro sentence uses the canonical wording:
+   - For step-numbered skills: *"…, delivered in N steps:"*
+   - For phase-numbered skills: *"Runs a strategic N-phase analysis…"* or *"Runs an N-phase audit…"*
 3. **Requirements** — model access, dependencies, prerequisites
-4. **Usage** — how to invoke (e.g., `/<skill-name>` or `/<skill-name> <argument>`)
-5. **Configuration** — table of frontmatter settings (Model, Effort, Takes argument, Allowed tools)
+4. **Usage** — how to invoke (e.g., `/<skill-name>` or `/<skill-name> <argument>`). Examples MUST use the skill's actual name in the slash command.
+5. **Configuration** — table of frontmatter settings. Required rows: `Model`, `Effort`, `Takes argument`, `Allowed tools`. The `Allowed tools` row must list the SAME tools as the SKILL.md `allowed-tools` frontmatter (including `EnterPlanMode`/`ExitPlanMode` if they're there).
 6. **Safety** — bullet points with bold labels describing what the skill can and cannot do
 
 The **Safety** section uses this pattern:
@@ -349,30 +370,37 @@ After creating a new skill, these project files must also be updated:
 
 ## Step 1: Gather Requirements
 
-If no argument was provided, ask the user what skill they want to create using `AskUserQuestion`.
+If an argument was provided, parse it as a description of the desired skill's purpose. Otherwise, ask the user what skill they want to create (an inline plain-text question is fine here — the answer is freeform).
 
-If an argument was provided, parse it as a description of the desired skill's purpose.
-
-Then ask the user the following questions (skip any that are already answered by the argument):
-
-1. **Name** — What should the skill be called? Suggest a name following the existing pattern (lowercase, hyphenated, concise). The name must be unique among existing skills.
-
-2. **Argument** — Does the skill accept a user argument? If so, what kinds of input? (file path, directory, identifier, description, etc.)
-
-3. **Capability** — Does the skill:
-   - Only analyze and report? (read-only)
-   - Modify existing files? (needs Edit)
-   - Create new files? (needs Write)
-   - Need internet access? (needs WebSearch, WebFetch)
-
-4. **Workflow** — What is the core workflow? What are the analysis dimensions? Skills typically analyze through 2-3 complementary lenses — what are the right lenses for this skill?
-
-5. **Output** — What does the final report look like? What finding ID prefix should be used?
-
-Read the existing skills directory to check for name conflicts:
+Read the existing skills directory to check for name conflicts before suggesting one:
 ```bash
 ls skills/
 ```
+
+Then collect the structured requirements. **Issue a single `AskUserQuestion` call** with up to 4 batched questions (skip any that are already answered by the argument):
+
+1. **Argument behavior** — single-select, options:
+   - `No argument` (skill always runs the same way)
+   - `Optional argument` (auto-detect when missing)
+   - `Required argument` (skill stops if missing)
+
+2. **Capabilities needed** — multi-select, options:
+   - `Modify existing files` (adds `Edit`)
+   - `Create new files` (adds `Write`)
+   - `Internet access` (adds `WebSearch, WebFetch`)
+   - `Track multi-step progress` (adds `TaskCreate, TaskUpdate`)
+   - `Hand off to another skill` (adds `Skill`)
+   - `Background commands + streaming output` (adds `Monitor`)
+
+3. **Subagent fan-out** — single-select (per R4's decision gate), options:
+   - `No subagents — single linear flow` (default; mirrors `github-ship`)
+   - `3 Explore subagents — three orthogonal analysis lenses` (mirrors `code-review`, `refactor`)
+
+For the freeform requirements that don't fit multiple-choice (skill name, workflow design, output format, finding-ID letter), follow up with plain-text questions or batch them into a second `AskUserQuestion` call if structured options are appropriate. Specifically still gather:
+
+- **Name** — suggest a name following the existing pattern (lowercase, hyphenated, concise). The name must be unique among existing skills.
+- **Workflow** — what is the core workflow? If subagents were selected, what are the three orthogonal lenses?
+- **Output** — what does the final report look like? What finding ID prefix should be used (per R5)?
 
 State the gathered requirements clearly before proceeding.
 
@@ -388,7 +416,7 @@ Based on the requirements from Step 1, design the complete skill. Read 1-2 exist
 
 2. **Argument resolution** — which steps from the R9 cascade are relevant? Design the resolution logic.
 
-3. **Agent structure** — define the 3 analysis agents per R4:
+3. **Subagent structure** — apply R4's decision gate first. **If the skill does not have three orthogonal analysis lenses, skip subagents entirely** and design a single linear workflow. Only if the decision gate passes (yes, three independent dimensions), design the 3 analysis agents:
    - What dimension does each agent cover?
    - What specific checklist items does each agent evaluate?
    - What structured format does each agent return?

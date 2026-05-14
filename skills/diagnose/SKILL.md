@@ -56,13 +56,10 @@ Determine what to investigate based on the argument and project state.
    ```
    If tests fail, use the failure output as the error to investigate.
 
-2. **Recent CI failures** — check for failed GitHub Actions runs:
+2. **Recent CI failures** — check for failed GitHub Actions runs. Capture the run id from JSON output and pass it to `gh run view`:
    ```bash
-   gh run list --status failure --limit 1 --json databaseId,displayTitle,conclusion,headBranch 2>/dev/null
-   ```
-   If a recent failure exists, fetch the failed job logs:
-   ```bash
-   gh run view <id> --log-failed 2>/dev/null | tail -100
+   run_id=$(gh run list --status failure --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null)
+   [ -n "$run_id" ] && gh run view "$run_id" --log-failed 2>/dev/null | tail -100
    ```
 
 3. **Uncommitted changes with issues** — check if there are unstaged changes that might contain the problem:
@@ -135,24 +132,25 @@ Investigate whether recent code changes introduced or exposed the bug.
   ```bash
   git log --oneline -20 2>/dev/null
   ```
-- Get recent changes to the files involved in the error:
+- Get recent changes to the files involved in the error. For each file path extracted from the error in Step 1, run:
   ```bash
-  git log --oneline -10 -- <error_file_1> <error_file_2> 2>/dev/null
+  git log --oneline -10 -- "<path>" 2>/dev/null
   ```
-- Get the full diff of the most recent commits touching the error files:
+- Get the full diff of the most recent commit touching each error file:
   ```bash
-  git log -1 --format=%H -- <error_files> 2>/dev/null
-  git show <commit_hash> 2>/dev/null
+  commit_hash=$(git log -1 --format=%H -- "<path>" 2>/dev/null)
+  [ -n "$commit_hash" ] && git show "$commit_hash" 2>/dev/null
   ```
-- If on a feature branch, diff against the default branch:
+- If on a feature branch, diff each error file against the default branch:
   ```bash
   default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
   [ -z "$default_branch" ] && git rev-parse --verify main >/dev/null 2>&1 && default_branch=main
   [ -z "$default_branch" ] && git rev-parse --verify master >/dev/null 2>&1 && default_branch=master
   ```
   ```bash
-  git diff "$default_branch"...HEAD -- <error_files> 2>/dev/null
+  git diff "$default_branch"...HEAD -- "<path>" 2>/dev/null
   ```
+  (Repeat the per-file `git log` / `git diff` commands for every path Step 1 extracted from the error.)
 - Read the full diff of any suspect commits and assess:
   - Did a recent change modify the failing code path?
   - Did a recent change modify a dependency of the failing code (a function it calls, a config it reads)?
@@ -175,13 +173,13 @@ Search for broader context: similar patterns, known issues, and environmental fa
   - Same error type occurring elsewhere (might reveal a known workaround or correct pattern)
   - Same API or function used correctly elsewhere (might reveal what the failing code is doing differently)
   - Same data type or structure handled differently in other modules
-- Search for markers near the error site:
+- Search for markers near the error site. For each file path extracted in Step 1:
   ```bash
-  grep -n "TODO\|FIXME\|HACK\|XXX\|WORKAROUND\|BUG" <error_files> 2>/dev/null
+  grep -n "TODO\|FIXME\|HACK\|XXX\|WORKAROUND\|BUG" "<path>" 2>/dev/null
   ```
-- Check project issues for similar problems:
+- Check project issues for similar problems. Extract 2-4 short keywords from the error message (function names, distinctive nouns) and pass them as a quoted search string:
   ```bash
-  gh issue list --state all --search "<error_keywords>" --limit 5 2>/dev/null
+  gh issue list --state all --search "<keywords>" --limit 5 2>/dev/null
   ```
 - If the error involves a third-party library or API, search for known issues:
   - Use WebSearch: `"<library_name>" "<error_message>" site:github.com OR site:stackoverflow.com`

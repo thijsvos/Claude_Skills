@@ -34,7 +34,7 @@ Generates high-quality tests through deep code analysis and convention detection
 | Model | `opus` |
 | Effort | `max` |
 | Takes argument | Yes |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 

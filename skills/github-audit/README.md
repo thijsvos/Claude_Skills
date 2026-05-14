@@ -1,6 +1,6 @@
 # GitHub Audit
 
-Audits a GitHub repository against best practices and provides prioritized recommendations for improving README quality, licensing, community health, CI/CD, repository settings, and documentation.
+Audits a GitHub repository against best practices and provides prioritized recommendations for README, license, community health, CI/CD, and repository settings.
 
 ## What It Does
 
@@ -30,7 +30,8 @@ The skill enters plan mode automatically, performs the audit using read-only Exp
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, AskUserQuestion, EnterPlanMode, ExitPlanMode |
+| Takes argument | No |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 
