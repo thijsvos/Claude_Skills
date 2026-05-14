@@ -20,8 +20,8 @@ Every `SKILL.md` must begin with YAML frontmatter between `---` delimiters.
 | Field | Description |
 |-------|-------------|
 | `name` | Skill identifier, must match the directory name (e.g., `enhance` for `skills/enhance/`) |
-| `description` | One-line summary of what the skill does |
-| `allowed-tools` | Comma-separated list of tools the skill may use |
+| `description` | One-line summary of what the skill does. Must end with a period and should be verb-first ("Scans...", "Audits...", "Performs..."). The same text must appear verbatim as the README first-line description and as the row in the root README skills table — `lint.sh` enforces all three matches. |
+| `allowed-tools` | Comma-separated list of tools the skill may use. The same list (in the same order) must appear in the README's `Configuration` table `Allowed tools` row — `lint.sh` enforces this parity. |
 
 **Optional fields:**
 
@@ -38,18 +38,19 @@ The body contains the prompt that Claude follows when the skill is invoked. Conv
 
 - Use clear step numbering for multi-phase workflows
 - Use `---` separators between major phases
-- If the skill uses subagents, explicitly state the required `subagent_type` and `model`
-- If the skill enters plan mode, the first instruction should be to call `EnterPlanMode` and the last should call `ExitPlanMode`
+- The first instruction should be the canonical line `` Call `EnterPlanMode` immediately before doing anything else. `` whenever `EnterPlanMode` is declared in `allowed-tools` (`lint.sh` enforces matched-pair body references for both `EnterPlanMode` and `ExitPlanMode`)
+- If the skill uses subagents (`Agent` in `allowed-tools` + `subagent_type: "Explore"` in the body), include the canonical IMPORTANT block verbatim from `create-skill` R4 explaining Explore read-only safety and the Opus model override. `lint.sh` warns when this block is missing.
+- Agent subheadings use `### Agent N: <Title>` (not `**Agent N:**`)
 
 ## README Convention
 
 Every skill's `README.md` must contain these sections (in order):
 
-1. **Title** — `# <Skill Name>` followed by a one-line description
-2. **What It Does** — Describe the workflow and phases
+1. **Title** — `# <Skill Name>` followed by a one-line description on line 3 that matches the SKILL.md `description` field verbatim (`lint.sh` enforces this)
+2. **What It Does** — Describe the workflow and phases. Use "delivered in N steps:" for step-numbered skills or "Runs a strategic N-phase analysis…" for phase-numbered skills.
 3. **Requirements** — Model access, dependencies, prerequisites
-4. **Usage** — How to invoke (e.g., `/<skill-name>` or `/<skill-name> <argument>`)
-5. **Configuration** — Table of frontmatter settings
+4. **Usage** — How to invoke. Examples must use the skill's actual name (`/<skill-name>` — `lint.sh` enforces this).
+5. **Configuration** — Table of frontmatter settings with required rows: `Model`, `Effort`, `Takes argument`, `Allowed tools`. The `Allowed tools` row must list the same tools as the SKILL.md `allowed-tools` frontmatter (`lint.sh` enforces this parity).
 6. **Safety** (if applicable) — What the skill can and cannot modify
 
 See `skills/enhance/README.md` as the reference implementation.
@@ -60,10 +61,11 @@ See `skills/enhance/README.md` as the reference implementation.
 2. Fill in the SKILL.md frontmatter and prompt
 3. Fill in the README.md sections
 4. Ensure the `name` field in frontmatter matches the directory name
-5. Run `./lint.sh <name>` to validate
-6. Update the skills table in the root `README.md`
-7. Run `./install.sh <name>` to create the symlink
-8. Commit and push
+5. Update the skills table in the root `README.md` (the table cell must match the SKILL.md `description` verbatim)
+6. Update `CHANGELOG.md` with the new skill under `## [Unreleased]` — `release.yml` extracts release notes from this section, so missing the update silently breaks the next release
+7. Run `./lint.sh <name>` to validate (and `./lint.sh` to confirm no regressions on the other skills)
+8. Run `./install.sh <name>` to create the symlink
+9. Commit and push
 
 ## Quality Standards
 
@@ -78,6 +80,13 @@ See `skills/enhance/README.md` as the reference implementation.
 
 Run `./lint.sh` to check all skills, or `./lint.sh <name>` for a specific skill. The linter checks:
 
-- Required frontmatter fields exist
+- Required frontmatter fields exist (`name`, `description`, `allowed-tools`)
 - Skill name matches directory name
+- Description ends with a period
+- `EnterPlanMode` and `ExitPlanMode` are paired in `allowed-tools` AND referenced in the body when present
+- Canonical IMPORTANT subagent block is present when `Agent` is paired with Explore subagents
 - README.md exists with required sections
+- README line 3 description matches SKILL.md `description` verbatim
+- Usage examples invoke the correct `/<skill-name>` (not stale names or unrelated commands)
+- Configuration table has `Takes argument` and `Allowed tools` rows
+- `Allowed tools` row matches SKILL.md `allowed-tools` frontmatter (whitespace-normalized)
