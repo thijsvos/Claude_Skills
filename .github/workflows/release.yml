@@ -19,6 +19,15 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Validate tag format
+        run: |
+          # Strictly accept v<major>.<minor>.<patch> with optional pre-release suffix.
+          # Rejects typos like "vv1.0.0" before any downstream parsing depends on them.
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?$ ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME is not a valid semver tag (expected vX.Y.Z[-pre])"
+            exit 1
+          fi
+
       - name: Extract version from tag
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
@@ -28,14 +37,20 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          # Extract the section for this version from CHANGELOG.md
-          # Matches from "## [X.Y.Z]" until the next "## [" or end of file
+          # Extract the section for this version from CHANGELOG.md.
+          # - Anchor the version match to "^## \[<ver>\]" so substring tags
+          #   (e.g. v1 matching [1.0.0]) can't collide.
+          # - Stop emitting on the next "## [" heading OR the first link-reference
+          #   line ([Unreleased]: ...) so the trailing compare-URL block in
+          #   CHANGELOG.md doesn't leak into the oldest entry's release body.
           notes=$(awk -v ver="$VERSION" '
+            BEGIN { pat = "^## \\[" ver "\\]" }
             /^## \[/ {
               if (found) exit
-              if (index($0, "[" ver "]")) found=1
+              if ($0 ~ pat) found=1
               next
             }
+            /^\[[^]]+\]:[[:space:]]*http/ { if (found) exit }
             found { print }
           ' CHANGELOG.md)
 
@@ -44,18 +59,28 @@ jobs:
             exit 1
           fi
 
-          # Write to output using delimiter syntax
+          # Write to output using a random delimiter so a literal "EOF_..." line
+          # in CHANGELOG can't terminate the value early (GitHub-published
+          # hardening for GITHUB_OUTPUT heredocs).
+          delim="EOF_$(openssl rand -hex 16)"
           {
-            echo "notes<<RELEASE_NOTES_EOF"
+            echo "notes<<$delim"
             echo "$notes"
-            echo "RELEASE_NOTES_EOF"
+            echo "$delim"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_NOTES: ${{ steps.notes.outputs.notes }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
-            --notes "$RELEASE_NOTES"
+          # Idempotent: if a release already exists for this tag (re-pushed tag,
+          # workflow retry, etc.), edit its notes instead of erroring out.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" \
+              --notes "$RELEASE_NOTES"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --notes "$RELEASE_NOTES"
+          fi
