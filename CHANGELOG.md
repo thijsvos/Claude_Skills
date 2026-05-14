@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-05-14
+
 ### Added
 
 - **Per-skill `## Example` sections** in every skill README (`skills/*/README.md`), placed between `## Usage` and `## Configuration`. Each example shows a 1-line scenario, the exact invocation, and an abbreviated transcript using the skill's real distinctive output surface (e.g., `code-review`'s `NEEDS CHANGES ✗` verdict, `dep-check`'s `[V1]` vulnerability format, `idiom-check`'s Remediation Bundle table). Long transcripts are wrapped in `<details><summary>Sample output</summary>…</details>` so the README stays scannable.
@@ -149,7 +151,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
 
-[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/thijsvos/Claude_Skills/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.10...v0.1.0
