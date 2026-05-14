@@ -26,16 +26,30 @@ else
     GREEN='' YELLOW='' RED='' BOLD='' NC=''
 fi
 
-# Emit a colored tagged line. Mirrors the pass/fail/warn helpers in lint.sh.
-emit() {  # emit COLOR TAG MSG
+# Emit a colored, two-bracket-tagged status line to stdout.
+#
+# Args: $1 = ANSI color escape (may be empty), $2 = short tag (e.g.
+# "skip", "backup", "installed"), $3 = message. Generic helper inspired
+# by pass/fail/warn in lint.sh but, unlike those, does NOT mutate any
+# totals counter (install.sh has no summary block).
+emit() {
     printf '  %s[%s]%s %s\n' "$1" "$2" "$NC" "$3"
 }
 
-# Crash safety: if a backup was made but the symlink wasn't recreated (e.g. Ctrl-C
-# between the `mv` and `ln`), restore the backup so the user isn't left empty-handed.
+# Crash-safety globals — set by install_skill across the mv→ln window,
+# read by restore_on_exit so a Ctrl-C between the `mv` and the `ln`
+# doesn't leave the user empty-handed.
 PENDING_TARGET=""
 PENDING_BACKUP=""
 
+# EXIT/INT/TERM trap handler — the crash-safety net for install_skill.
+#
+# Reads the PENDING_TARGET / PENDING_BACKUP globals (set by install_skill
+# just before `mv "$target" "$bak"` and cleared after the new `ln -snf`
+# succeeds). If they're non-empty and the new symlink wasn't created
+# (Ctrl-C between the mv and the ln, or the ln itself failed), atomically
+# moves the backup back into place. Calls `exit "$rc"` with the original
+# exit status so the trap is transparent to `set -euo pipefail`.
 restore_on_exit() {
     local rc=$?
     if [[ -n "$PENDING_BACKUP" && -n "$PENDING_TARGET" ]]; then
@@ -47,6 +61,15 @@ restore_on_exit() {
 }
 trap restore_on_exit EXIT INT TERM
 
+# Install a single skill by symlinking it from $SKILLS_DIR into $TARGET_DIR.
+#
+# Idempotent: an already-correct symlink is skipped; a stale symlink is
+# replaced atomically via `ln -snf`; an existing real file/dir is renamed to
+# a `.bak` (timestamp-suffixed if a prior `.bak` already exists). Side
+# effects: sets PENDING_TARGET and PENDING_BACKUP across the mv→ln window
+# so restore_on_exit can roll back if interrupted, then clears them on
+# success. Args: $1 = skill name (a directory under $SKILLS_DIR). Returns
+# 1 if the source dir is missing, 0 otherwise.
 install_skill() {
     local skill_name="$1"
     local source="$SKILLS_DIR/$skill_name"
