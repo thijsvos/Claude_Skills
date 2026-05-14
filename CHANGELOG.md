@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-14
+
+### Fixed
+
+- **`release.yml` is now idempotent on re-pushed tags** (`gh release view ... && gh release edit ... || gh release create ...`). Was the exact bug that required manual tag deletion + recreation during the v0.1.1 release.
+- **`release.yml` awk extraction no longer leaks CHANGELOG link references** into the oldest release's notes. Stops emitting at the first `^[...]: http...` line.
+- **`lint.yml` declares an explicit `permissions: contents: read`** instead of inheriting the repo-default `GITHUB_TOKEN` scope.
+- **`lint.yml` runs `bash lint.sh`** instead of `chmod +x lint.sh && ./lint.sh`. The chmod was silently re-adding the executable bit on every run, masking any real permission regression.
+- **`.gitignore` no longer ignores the whole `.claude/` directory** (which is project-tracked). Narrowed to `.claude/local/` and `.claude/settings.local.json` so new files added under `.claude/` aren't silently swallowed by `git add`.
+- **`install.sh` `restore_on_exit`** now prints a loud warning to stderr if the rollback `mv` itself fails (previously swallowed via `|| true`), so users know the backup is still at the `.bak` path.
+
+### Changed
+
+- **Root `README.md` skills-table descriptions now match each `SKILL.md` `description` field verbatim.** Same canonical description in SKILL.md frontmatter + README line 3 + root README table cell. Previously 6 of 11 table cells diverged.
+- **`CLAUDE.md` updated to document what `lint.sh` actually enforces post-v0.1.0**: description must end with a period; Configuration table requires `Model`/`Effort`/`Takes argument`/`Allowed tools` rows; `Allowed tools` row must match SKILL.md frontmatter verbatim; canonical IMPORTANT subagent block required when `Agent` + Explore are used; `### Agent N:` subheading style. Validation section enumerates all 11 lint checks explicitly.
+- **`CLAUDE.md` "Adding a New Skill"** step list now mentions `CHANGELOG.md` (previously omitted — silently broke `release.yml`'s notes extraction). Step order reconciled with `CONTRIBUTING.md`.
+- **PR template checklist** expanded from 5 items to 12 to cover the v0.1.0 lint rules contributors might forget (description period, three-way verbatim description match, Configuration row parity, IMPORTANT block presence, `EnterPlanMode`/`ExitPlanMode` pairing).
+- **`SECURITY.md` SLA softened** from "48h ack / 7d resolution" to best-effort "7d ack / 30d resolution" for a maintainer-led repo. Added a "Supported Versions" section explaining the forward-only `git pull` model.
+- **`CHANGELOG.md` v0.1.1 entry restructured** from one ~30-line paragraph into a top-line summary + 4 sub-bullets.
+- **CONTRIBUTING.md** sample frontmatter description now ends with a period, matching the lint rule.
+
+### Added
+
+- **Release workflow hardening (defense-in-depth)**: `release.yml` validates the tag against `^v[0-9]+\.[0-9]+\.[0-9]+(-...)?$` up front; uses a random `EOF_$(openssl rand -hex 16)` `GITHUB_OUTPUT` heredoc delimiter so a literal `RELEASE_NOTES_EOF` in CHANGELOG can't terminate the value early; awk uses an anchored regex (`^## \[<ver>\]`) instead of substring search.
+- **Issue templates** gain `title:` prefills (`[Bug] `, `[Skill Request] `) for triage searchability. `bug_report.yml`'s `model` input is now a `dropdown` for consistency with `skill_request.yml`.
+- **`.editorconfig` adds explicit `[*.{yml,yaml}]`** (2-space) and `[*.md]` (2-space + `trim_trailing_whitespace = false` to preserve Markdown hard line breaks) blocks.
+- **`.gitignore` gains Python** (`venv/`, `.venv/`, `.pytest_cache/`, `.coverage`, `htmlcov/`, `*.egg-info/`) and Windows (`Thumbs.db`) entries.
+- **`dependabot.yml`** gains `labels: [ci, dependencies]`, `open-pull-requests-limit: 5`, a `groups.actions` block that batches all action updates into one weekly PR, and `commit-message: prefix: ci`.
+- **README "Contributing" section** now links `CODE_OF_CONDUCT.md` alongside CONTRIBUTING, issue templates, and SECURITY.md.
+
 ## [0.1.1] - 2026-05-14
 
 ### Changed
@@ -111,7 +141,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
 
-[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.10...v0.1.0
 [0.0.10]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.9...v0.0.10
