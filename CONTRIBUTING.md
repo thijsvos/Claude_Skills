@@ -17,7 +17,7 @@ Before writing code, [open a Skill Request issue](https://github.com/thijsvos/Cl
    ```yaml
    ---
    name: my-skill
-   description: What the skill does
+   description: Verb-first one-line summary of what the skill does, ending with a period.
    allowed-tools: Read, Grep, Glob
    model: opus          # optional: opus, sonnet, haiku
    effort: max          # optional: min, low, medium, high, max
