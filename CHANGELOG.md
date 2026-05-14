@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-05-14
+
 ### Fixed
 - `dep-check`: `ExitPlanMode` was called AFTER Step 4 attempted manifest edits, which made the apply phase unreachable while plan mode was still active. Moved the call to the end of Step 3 (before the action offer).
 - `diagnose` README: every Usage example invoked `/debug` (the pre-rename name), which would either fail or hit a different built-in command. Replaced with `/diagnose`.
@@ -100,7 +102,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
 
-[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.10...HEAD
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.10...v0.1.0
 [0.0.10]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/thijsvos/Claude_Skills/compare/v0.0.7...v0.0.8
