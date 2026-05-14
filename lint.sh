@@ -57,8 +57,12 @@ lint_skill() {
     fi
     pass "SKILL.md exists"
 
-    # Check frontmatter exists
-    if ! head -1 "$skill_md" | grep -q '^---$'; then
+    # Check frontmatter exists.
+    # Read the first line natively (no pipeline, no subshell). `|| true` lets the
+    # `read` short-circuit on an empty file without tripping `set -e`.
+    local first_line=""
+    IFS= read -r first_line < "$skill_md" || true
+    if [[ "$first_line" != "---" ]]; then
         fail "SKILL.md missing frontmatter (must start with ---)"
         return
     fi
@@ -161,9 +165,11 @@ lint_skill() {
     fi
 
     # README first line description should match SKILL.md description
-    # (skip the "# Title" heading — line 3 is the description in the README template)
-    local readme_desc
-    readme_desc="$(sed -n '3p' "$readme_md")"
+    # (skip the "# Title" heading — line 3 is the description in the README template).
+    # Read exactly three lines natively instead of spawning `sed -n '3p'`; the
+    # brace group's redirection closes the file after the third read.
+    local readme_desc=""
+    { IFS= read -r _; IFS= read -r _; IFS= read -r readme_desc; } < "$readme_md" || true
     if [[ -n "$desc_val" && -n "$readme_desc" ]]; then
         if [[ "$readme_desc" == "$desc_val" ]]; then
             pass "README description matches SKILL.md description"
@@ -188,7 +194,9 @@ lint_skill() {
         | sort -u \
         | { grep -Fxv "/$name_val" || true; })"
     if [[ -n "$bad_invocations" ]]; then
-        warn "README Usage references non-self slash commands: $(echo "$bad_invocations" | tr '\n' ' ')"
+        # Native parameter expansion: replace every literal newline with a space,
+        # no external `echo`/`tr` and no problematic flag-eating by `echo`.
+        warn "README Usage references non-self slash commands: ${bad_invocations//$'\n'/ }"
     else
         pass "README Usage examples reference /$name_val correctly"
     fi
@@ -205,18 +213,20 @@ lint_skill() {
         fail "Configuration table missing 'Allowed tools' row"
     fi
 
-    # allowed-tools in SKILL.md frontmatter == Allowed tools row in README Configuration table
+    # allowed-tools in SKILL.md frontmatter == Allowed tools row in README Configuration table.
+    # Native bash regex captures the cell in one pass — no grep|head|sed|sed|tr pipeline,
+    # no `\|` ambiguity between sed -E (ERE) and sed (BRE).
     if [[ -n "$tools_val" ]]; then
-        local readme_tools
-        readme_tools="$(grep -E '\|[[:space:]]*Allowed tools[[:space:]]*\|' "$readme_md" \
-            | head -1 \
-            | sed -E 's/^\|[[:space:]]*Allowed tools[[:space:]]*\|[[:space:]]*//' \
-            | sed -E 's/[[:space:]]*\|[[:space:]]*$//' \
-            | tr -d '`')"
-        # Normalize whitespace and trailing spaces
-        local norm_skill_tools norm_readme_tools
-        norm_skill_tools="$(echo "$tools_val" | tr -d '[:space:]')"
-        norm_readme_tools="$(echo "$readme_tools" | tr -d '[:space:]')"
+        local readme_tools="" rline
+        while IFS= read -r rline; do
+            if [[ "$rline" =~ ^\|[[:space:]]*Allowed[[:space:]]+tools[[:space:]]*\|[[:space:]]*(.*[^[:space:]])[[:space:]]*\|[[:space:]]*$ ]]; then
+                readme_tools="${BASH_REMATCH[1]//\`/}"
+                break
+            fi
+        done < "$readme_md"
+        # Strip whitespace via parameter expansion (no external `tr`, no `echo` flag-eating).
+        local norm_skill_tools="${tools_val//[[:space:]]/}"
+        local norm_readme_tools="${readme_tools//[[:space:]]/}"
         if [[ "$norm_skill_tools" == "$norm_readme_tools" ]]; then
             pass "Allowed tools row matches SKILL.md allowed-tools"
         else
