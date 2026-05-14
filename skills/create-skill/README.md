@@ -26,6 +26,47 @@ The SKILL.md itself contains a comprehensive **Skill Creation Reference** that d
 /create-skill                                       # No argument -- will ask what to create
 ```
 
+## Example
+
+Scaffolding a new "C# security audit" skill from scratch:
+
+```
+/create-skill "security audit for C# codebases"
+```
+
+<details>
+<summary>Sample flow</summary>
+
+```
+[Step 1] Gathering requirements via batched AskUserQuestion …
+  ✓ Argument behavior: Optional argument
+  ✓ Capabilities: Modify existing files, Internet access
+  ✓ Subagent fan-out: 3 Explore subagents — three orthogonal analysis lenses
+
+[Step 2] Designed skill: name=csharp-security, prefix=[S1], 3 lenses
+        (OWASP / .NET-specific weaknesses / build config)
+
+[Step 3] Generated SKILL.md + README.md previews (presented inline for review).
+
+> **Ready to create this skill?** (e.g., "yes", "change the name to X")
+
+[After approval]
+
+> **Skill created and installed.** `/csharp-security` is ready to use.
+>
+> Files created:
+> - `skills/csharp-security/SKILL.md`
+> - `skills/csharp-security/README.md`
+>
+> Files updated:
+> - `README.md` (skills table)
+> - `CHANGELOG.md` (Unreleased section)
+>
+> Run `/csharp-security` to try it out.
+```
+
+</details>
+
 ## Configuration
 
 | Setting | Value |

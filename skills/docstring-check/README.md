@@ -31,6 +31,60 @@ The key behaviors are **convention-matching** (fixes adopt the project's detecte
 /docstring-check "the public API"             # Natural language scope description
 ```
 
+## Example
+
+Auditing a Python module after a signature refactor:
+
+```
+/docstring-check src/users.py
+```
+
+<details>
+<summary>Sample plan</summary>
+
+```
+## Docstring Plan: src/users.py
+
+**Scope**: 1 file, 12 documentable symbols inspected | **Findings**: 4 (1 missing, 2 drift, 1 style)
+**Detected style**: Google
+**Linters run**: ruff (D rules)
+
+### Verification Strategy
+Linter available — will re-run `ruff check --select D src/users.py` after fixes.
+
+---
+
+### Signature / Content Drift
+
+**[D1]** `src/users.py:88` — `def update_user(uid, **kwargs)`
+**Current**:
+    """Update a user.
+
+    Args:
+        user_id: The ID of the user to update.
+        name: The new name.
+    """
+
+**Proposed**:
+    """Update a user.
+
+    Args:
+        uid: The ID of the user to update.
+        **kwargs: Fields to update. Supported keys: name, email, role.
+    """
+**Why**: Docstring still names `user_id` and `name` after the signature switched to `uid` + `**kwargs`.
+
+---
+
+### Missing Docstrings — Public API
+
+**[D3]** `src/users.py:142` — `class UserRegistry` — Critical
+```
+
+</details>
+
+> **Ready to apply these docstring fixes?** (e.g., "apply all", "apply D1 through D3", "apply public API only")
+
 ## Configuration
 
 | Setting | Value |

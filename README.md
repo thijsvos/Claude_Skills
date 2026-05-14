@@ -9,19 +9,19 @@ A curated collection of custom skills for [Claude Code](https://docs.anthropic.c
 
 ## Available Skills
 
-| Skill | Description | Model | Effort |
-|-------|-------------|-------|--------|
-| [enhance](skills/enhance/) | Performs deep multi-phase project analysis to identify and recommend the single most impactful addition to implement. | Opus | Max |
-| [github-audit](skills/github-audit/) | Audits a GitHub repository against best practices and provides prioritized recommendations for README, license, community health, CI/CD, and repository settings. | Opus | Max |
-| [code-review](skills/code-review/) | Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers. | Opus | Max |
-| [test-gen](skills/test-gen/) | Analyzes code to generate comprehensive tests covering happy paths, edge cases, error handling, and integration points, matching the project's existing test conventions. | Opus | Max |
-| [dep-check](skills/dep-check/) | Scans all dependency declarations across ecosystems, checks for updates and vulnerabilities, and produces a prioritized update plan with testing recommendations. | Opus | Max |
-| [diagnose](skills/diagnose/) | Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses. | Opus | Max |
-| [refactor](skills/refactor/) | Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes. | Opus | Max |
-| [create-skill](skills/create-skill/) | Interactive skill generator that scaffolds new skills following all project conventions, serving as the definitive reference for skill creation. | Opus | Max |
-| [docstring-check](skills/docstring-check/) | Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies behavior-preserving fixes matching the project's detected convention. | Opus | Max |
-| [github-ship](skills/github-ship/) | Turns local changes into a GitHub issue and linked PR, or cleans up the branch if the PR was already merged. Auto-detects which. | Opus | Max |
-| [idiom-check](skills/idiom-check/) | Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles. | Opus | Max |
+| Skill | Description | Model | Effort | Example |
+|-------|-------------|-------|--------|---------|
+| [enhance](skills/enhance/) | Performs deep multi-phase project analysis to identify and recommend the single most impactful addition to implement. | Opus | Max | [view](skills/enhance/README.md#example) |
+| [github-audit](skills/github-audit/) | Audits a GitHub repository against best practices and provides prioritized recommendations for README, license, community health, CI/CD, and repository settings. | Opus | Max | [view](skills/github-audit/README.md#example) |
+| [code-review](skills/code-review/) | Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers. | Opus | Max | [view](skills/code-review/README.md#example) |
+| [test-gen](skills/test-gen/) | Analyzes code to generate comprehensive tests covering happy paths, edge cases, error handling, and integration points, matching the project's existing test conventions. | Opus | Max | [view](skills/test-gen/README.md#example) |
+| [dep-check](skills/dep-check/) | Scans all dependency declarations across ecosystems, checks for updates and vulnerabilities, and produces a prioritized update plan with testing recommendations. | Opus | Max | [view](skills/dep-check/README.md#example) |
+| [diagnose](skills/diagnose/) | Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses. | Opus | Max | [view](skills/diagnose/README.md#example) |
+| [refactor](skills/refactor/) | Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes. | Opus | Max | [view](skills/refactor/README.md#example) |
+| [create-skill](skills/create-skill/) | Interactive skill generator that scaffolds new skills following all project conventions, serving as the definitive reference for skill creation. | Opus | Max | [view](skills/create-skill/README.md#example) |
+| [docstring-check](skills/docstring-check/) | Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies behavior-preserving fixes matching the project's detected convention. | Opus | Max | [view](skills/docstring-check/README.md#example) |
+| [github-ship](skills/github-ship/) | Turns local changes into a GitHub issue and linked PR, or cleans up the branch if the PR was already merged. Auto-detects which. | Opus | Max | [view](skills/github-ship/README.md#example) |
+| [idiom-check](skills/idiom-check/) | Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles. | Opus | Max | [view](skills/idiom-check/README.md#example) |
 
 ## Quick Start
 

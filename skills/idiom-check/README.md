@@ -31,6 +31,58 @@ The skill explicitly supports Rust, Python, TypeScript / JavaScript, Go, and Rub
 
 The skill takes no argument. It always audits the whole repository (with optional narrowing to a top-level subdirectory if more than 50 source files are detected).
 
+## Example
+
+Auditing a Rust crate where parser code clones strings unnecessarily:
+
+```
+/idiom-check
+```
+
+<details>
+<summary>Sample audit</summary>
+
+```
+## Idiom Audit: Rust — src/
+
+**Scope**: 14 files, 2,847 total lines | **Language**: Rust (edition 2021)
+**Findings**: 9 total (3 high, 4 medium, 2 low)
+
+---
+
+### High
+
+| ID   | File:Line                  | Title                            | Lens      | Confidence | Risk |
+|------|----------------------------|----------------------------------|-----------|------------|------|
+| [I1] | `src/parser/mod.rs:42`     | `String` arg should be `&str`    | Ownership | High       | Safe |
+| [I2] | `src/parser/tokens.rs:88`  | Unnecessary `.clone()` in loop   | Ownership | High       | Safe |
+| [I3] | `src/lex.rs:115`           | `.unwrap()` on parse boundary    | Types     | High       | Safe |
+
+(detailed `**[I1]**` blocks follow with Current / Idiomatic snippets and "why in THIS codebase" rationale)
+
+---
+
+### Looks Good (do not change)
+
+- Error types use `thiserror` consistently with `#[error]` derives.
+- `Iterator` impls in `src/walk.rs` return `impl Iterator<Item = …>` (idiomatic for crate API).
+- `Display` placement is correct — user-facing in `Cli::format`, `Debug` everywhere else.
+
+---
+
+### Remediation Bundles
+
+| ID | Title                                 | Findings   | Files | Effort | Risk |
+|----|---------------------------------------|------------|-------|--------|------|
+| B1 | Replace clones with borrows in parser | I1, I2     | 2     | M      | Safe |
+| B2 | Idiomatic error propagation with `?`  | I3, I5, I9 | 3     | M      | Safe |
+| B3 | Iterator chains over manual loops     | I4, I6     | 1     | S      | Safe |
+```
+
+</details>
+
+> **Apply which bundles?** (e.g., "apply all", "apply B1 only", "skip — keep the report")
+
 ## Configuration
 
 | Setting | Value |

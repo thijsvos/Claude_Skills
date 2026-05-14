@@ -27,6 +27,55 @@ Generates high-quality tests through deep code analysis and convention detection
 /test-gen src/api/users.py         # Works with any language
 ```
 
+## Example
+
+Generating tests for a date-parsing utility that has no test coverage:
+
+```
+/test-gen src/utils/parseDate.ts
+```
+
+<details>
+<summary>Sample plan + result</summary>
+
+```
+## Test Plan: src/utils/parseDate.ts
+
+**Target**: `parseDate` (5 branches) | **Tests**: 8 planned
+**Framework**: Vitest | **Pattern**: Co-located `*.test.ts` files
+**Test file**: `src/utils/parseDate.test.ts`
+
+### Critical Tests (must-have)
+
+**[T1]** `parseDate` — Parses ISO 8601 with timezone offset
+Type: unit
+Covers: happy path, the most-called shape in production usage
+
+**[T2]** `parseDate` — Returns `null` for empty input
+Type: edge case
+Covers: explicit early-return branch at line 12
+
+**[T3]** `parseDate` — Throws `InvalidDateError` for malformed input
+Type: error handling
+Covers: catch branch at line 28
+
+### Additional Coverage (nice-to-have)
+
+**[T4]–[T8]**: boundary years (1970, 2038), leap day, DST transitions, naive vs aware …
+
+### Already Covered (skipping)
+
+- `formatDate` — covered by `src/utils/formatDate.test.ts`
+
+[After approval, generation, and verification]
+
+> **All 8 tests passed.**
+```
+
+</details>
+
+> **Ready to generate these tests?** (e.g., "yes", "skip T5 and T7", "only critical")
+
 ## Configuration
 
 | Setting | Value |

@@ -26,6 +26,49 @@ Analyzes code changes across multiple quality dimensions using parallel AI agent
 /code-review HEAD~3..HEAD       # Review a specific commit range
 ```
 
+## Example
+
+Reviewing a recent change to an auth handler:
+
+```
+/code-review src/auth/handler.ts
+```
+
+<details>
+<summary>Sample report</summary>
+
+```
+## Code Review: src/auth/handler.ts
+
+**Scope**: 1 file changed (+47, -12) | **Findings**: 1 critical, 2 warnings, 3 suggestions
+
+### Verdict: NEEDS CHANGES ✗
+
+Token validation is bypassable on the refresh path; addressing C1 unblocks ship.
+
+---
+
+### Critical
+
+**[C1]** `src/auth/handler.ts:88` — Refresh token reused after rotation
+The refresh-token branch returns the *old* token to the client even after rotating server-side, leaving the previous token valid for the full TTL.
+**Fix:** Return the rotated token from `rotateRefreshToken()` rather than the parameter passed in.
+
+### Warnings
+
+**[W1]** `src/auth/handler.ts:42` — Missing rate-limit on `/login` …
+**[W2]** `src/auth/handler.ts:115` — Sensitive error returned to client …
+
+### Looks Good
+
+- Session expiry uses `crypto.timingSafeEqual` — constant-time comparison is the idiomatic Node choice.
+- New tests in `handler.test.ts` cover the rotation path end-to-end.
+```
+
+</details>
+
+> **Want me to fix any of these?** (e.g., "fix C1 and W2", "fix all critical")
+
 ## Configuration
 
 | Setting | Value |

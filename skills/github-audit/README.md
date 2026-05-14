@@ -24,6 +24,49 @@ Runs a 3-phase audit of your repository's GitHub presence:
 
 The skill enters plan mode automatically, performs the audit using read-only Explore subagents, asks about your project's intended audience to calibrate recommendations, then presents findings and offers to implement improvements.
 
+## Example
+
+Auditing a Rust library that just went public:
+
+```
+/github-audit
+```
+
+<details>
+<summary>Sample report</summary>
+
+```
+### Repository Scorecard
+
+| Category               | Status            | Priority |
+|------------------------|-------------------|----------|
+| README Quality         | Needs improvement | High     |
+| License                | Good              | —        |
+| Community Health       | Missing           | Medium   |
+| CI/CD & Automation     | Good              | —        |
+| Repository Settings    | Needs improvement | High     |
+| Git Hygiene            | Good              | —        |
+| Documentation          | Needs improvement | Medium   |
+
+### Top Recommendations
+
+#### 1. Add a `CODE_OF_CONDUCT.md` and issue templates
+**Category**: Community Health
+**Effort**: Quick fix (< 5 min)
+**Impact**: Signals the project welcomes external contributors; required for some org policies.
+**What to do**: Use the Contributor Covenant 2.1 template and the GitHub default issue forms.
+
+#### 2. Enable Dependabot for `cargo` updates
+**Category**: CI/CD & Automation
+**Effort**: Quick fix (< 5 min)
+**Impact**: Catches CVE-affected crates within a day of disclosure.
+**Skill handoff**: Once enabled, run /dep-check to action the first batch.
+```
+
+</details>
+
+> **Want me to implement any of these recommendations?**
+
 ## Configuration
 
 | Setting | Value |

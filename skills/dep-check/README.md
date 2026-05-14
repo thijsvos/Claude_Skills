@@ -26,6 +26,63 @@ Performs a comprehensive dependency audit across every ecosystem present in the 
 /dep-check docker                 # Check only Docker base image versions
 ```
 
+## Example
+
+Auditing a Python project with two outdated packages and one published CVE:
+
+```
+/dep-check python
+```
+
+<details>
+<summary>Sample report</summary>
+
+```
+## Dependency Report: my-app
+
+**Scanned**: 2 manifest files across 1 ecosystem | **Dependencies**: 47
+**Updates available**: 12 | **Vulnerabilities**: 1 (1 high)
+
+---
+
+### Security Vulnerabilities (act immediately)
+
+**[V1]** `requests` 2.28.1 — CVE-2024-35195: cert verification bypass via session reuse
+Severity: **high** | File: `requirements.txt`
+Fixed in: `2.32.0`
+Update command:
+    pip install --upgrade "requests>=2.32.0"
+
+---
+
+### Update Plan
+
+#### Group 1: Security patches (no breaking changes expected)
+**Risk**: Low | **Effort**: Minimal
+
+| Package  | Current | Target | Delta | File             |
+|----------|---------|--------|-------|------------------|
+| requests | 2.28.1  | 2.32.3 | minor | requirements.txt |
+
+#### Group 2: Minor updates (backward-compatible)
+**Risk**: Low-Medium | **Effort**: Minimal
+
+| Package  | Current | Target | Delta | File             |
+|----------|---------|--------|-------|------------------|
+| httpx    | 0.27.0  | 0.27.2 | patch | requirements.txt |
+| pydantic | 2.5.0   | 2.7.4  | minor | requirements.txt |
+
+---
+
+### Already Up to Date
+
+11 dependencies are already at their latest version.
+```
+
+</details>
+
+> **Want me to apply any of these updates?** (e.g., "apply all", "apply security patches only", "apply V1")
+
 ## Configuration
 
 | Setting | Value |

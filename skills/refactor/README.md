@@ -30,6 +30,53 @@ The key innovation is **cross-cutting synthesis**: changes that improve multiple
 /refactor "the database layer"           # Natural language scope description
 ```
 
+## Example
+
+Refactoring a TypeScript auth handler that mixes correctness, security, and performance concerns:
+
+```
+/refactor src/auth/handler.ts
+```
+
+<details>
+<summary>Sample plan</summary>
+
+```
+## Refactoring Plan: src/auth/handler.ts
+
+**Scope**: 1 file, 240 total lines | **Findings**: 7 (2 cross-cutting, 2 correctness/security, 1 performance, 2 structure)
+
+### Test Coverage
+Tests found — runner: `npm test -- src/auth/handler.test.ts`. 14 tests, all passing.
+
+---
+
+### Cross-Cutting Improvements (one change, multiple benefits)
+
+| ID   | File:Line                | Change                                      | Pillars | Confidence | Risk |
+|------|--------------------------|---------------------------------------------|---------|------------|------|
+| [R1] | `src/auth/handler.ts:42` | Replace inline crypto with `subtle.digest`  | [C+S]   | High       | Safe |
+| [R2] | `src/auth/handler.ts:88` | Memoize `decodeToken` per request           | [P+S]   | High       | Safe |
+
+---
+
+### Correctness & Security
+
+**[R3]** `src/auth/handler.ts:115` — Constant-time comparison missing on session-id check
+The `===` comparison is variable-time; switch to `crypto.timingSafeEqual` to close the timing-oracle gap.
+
+---
+
+### Strengths
+
+- Rate-limit middleware is correctly applied to `/login` and `/refresh` only.
+- Error responses do not leak internal detail to clients.
+```
+
+</details>
+
+> **Ready to apply these changes?** (e.g., "apply all", "apply R1 and R2", "apply all safe changes")
+
 ## Configuration
 
 | Setting | Value |

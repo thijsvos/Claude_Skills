@@ -318,8 +318,9 @@ Every skill's `README.md` must contain these sections **in this order**:
    - For phase-numbered skills: *"Runs a strategic N-phase analysis…"* or *"Runs an N-phase audit…"*
 3. **Requirements** — model access, dependencies, prerequisites
 4. **Usage** — how to invoke (e.g., `/<skill-name>` or `/<skill-name> <argument>`). Examples MUST use the skill's actual name in the slash command.
-5. **Configuration** — table of frontmatter settings. Required rows: `Model`, `Effort`, `Takes argument`, `Allowed tools`. The `Allowed tools` row must list the SAME tools as the SKILL.md `allowed-tools` frontmatter (including `EnterPlanMode`/`ExitPlanMode` if they're there).
-6. **Safety** — bullet points with bold labels describing what the skill can and cannot do
+5. **Example** — a 1-line scenario, the exact invocation, and a faithful abbreviated transcript wrapped in `<details><summary>Sample output</summary>…</details>`. Use the skill's real format strings (verdict banners, finding-ID prefix, report headings) so users can recognize the output before they install. Avoid `## Usage`-style slash-command lines that reference OTHER skills inside `## Usage` (the linter scans Usage for cross-skill references); `## Example` is exempt from that check by design. Keep the visible part under ~25 lines.
+6. **Configuration** — table of frontmatter settings. Required rows: `Model`, `Effort`, `Takes argument`, `Allowed tools`. The `Allowed tools` row must list the SAME tools as the SKILL.md `allowed-tools` frontmatter (including `EnterPlanMode`/`ExitPlanMode` if they're there).
+7. **Safety** — bullet points with bold labels describing what the skill can and cannot do
 
 The **Safety** section uses this pattern:
 ```
