@@ -1,16 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Require bash 3.2+ (macOS system /bin/bash is 3.2; Homebrew bash and Ubuntu CI
+# are 5+). Fails loud on `sh`-as-bash or ancient bash setups so we don't get
+# the "works on CI, silently broken on macOS" class of bug.
+if (( BASH_VERSINFO[0] < 3 || (BASH_VERSINFO[0] == 3 && BASH_VERSINFO[1] < 2) )); then
+    printf 'Error: bash 3.2+ required (found %s)\n' "$BASH_VERSION" >&2
+    exit 1
+fi
+
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILLS_DIR="$REPO_DIR/skills"
 
-# Colors (disabled if not a terminal)
-if [[ -t 1 ]]; then
-    GREEN='\033[0;32m'
-    YELLOW='\033[0;33m'
-    RED='\033[0;31m'
-    BOLD='\033[1m'
-    NC='\033[0m'
+# Colors (disabled if not a terminal or terminal has no color support).
+# Use `tput` so the right escape sequence is picked for the actual terminfo
+# entry instead of hardcoding xterm-only bytes.
+if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && [[ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]]; then
+    GREEN="$(tput setaf 2)"
+    YELLOW="$(tput setaf 3)"
+    RED="$(tput setaf 1)"
+    BOLD="$(tput bold)"
+    NC="$(tput sgr0)"
 else
     GREEN='' YELLOW='' RED='' BOLD='' NC=''
 fi
@@ -19,9 +29,12 @@ TOTAL_PASS=0
 TOTAL_FAIL=0
 TOTAL_WARN=0
 
-pass() { echo -e "  ${GREEN}[pass]${NC} $1"; TOTAL_PASS=$((TOTAL_PASS + 1)); }
-fail() { echo -e "  ${RED}[fail]${NC} $1"; TOTAL_FAIL=$((TOTAL_FAIL + 1)); }
-warn() { echo -e "  ${YELLOW}[warn]${NC} $1"; TOTAL_WARN=$((TOTAL_WARN + 1)); }
+# Use `printf` instead of `echo -e` so behavior is identical across bash
+# builtin / dash / BSD echo. The color variables already hold literal escape
+# bytes thanks to `tput` above (no `\033` literals to interpret).
+pass() { printf '  %s[pass]%s %s\n' "$GREEN"  "$NC" "$1"; TOTAL_PASS=$((TOTAL_PASS + 1)); }
+fail() { printf '  %s[fail]%s %s\n' "$RED"    "$NC" "$1"; TOTAL_FAIL=$((TOTAL_FAIL + 1)); }
+warn() { printf '  %s[warn]%s %s\n' "$YELLOW" "$NC" "$1"; TOTAL_WARN=$((TOTAL_WARN + 1)); }
 
 # Extract a frontmatter field value from a SKILL.md file
 get_frontmatter() {
@@ -35,7 +48,7 @@ lint_skill() {
     local skill_md="$skill_dir/SKILL.md"
     local readme_md="$skill_dir/README.md"
 
-    echo -e "\n${BOLD}Checking: $skill_name${NC}"
+    printf '\n%sChecking: %s%s\n' "$BOLD" "$skill_name" "$NC"
 
     # Check SKILL.md exists
     if [[ ! -f "$skill_md" ]]; then
@@ -208,39 +221,41 @@ lint_skill() {
     fi
 }
 
-echo -e "${BOLD}Claude Skills Linter${NC}"
-echo "===================="
+printf '%sClaude Skills Linter%s\n' "$BOLD" "$NC"
+printf '====================\n'
 
 if [[ $# -gt 0 ]]; then
     for skill in "$@"; do
         if [[ ! -d "$SKILLS_DIR/$skill" ]]; then
-            echo -e "\n${RED}Error: Skill '$skill' not found in $SKILLS_DIR${NC}"
+            printf '\n%sError: Skill %s not found in %s%s\n' "$RED" "'$skill'" "$SKILLS_DIR" "$NC"
             TOTAL_FAIL=$((TOTAL_FAIL + 1))
             continue
         fi
         lint_skill "$skill"
     done
 else
+    # `shopt -s nullglob` so the loop body doesn't run on the literal pattern
+    # when the directory is empty. Trailing `/` in the glob already restricts
+    # to directories, so the in-loop `-d` test is redundant.
+    shopt -s nullglob
     for skill_dir in "$SKILLS_DIR"/*/; do
-        [[ -d "$skill_dir" ]] || continue
-        skill_name="$(basename "$skill_dir")"
+        skill_name="${skill_dir%/}"
+        skill_name="${skill_name##*/}"
         lint_skill "$skill_name"
     done
+    shopt -u nullglob
 fi
 
-echo ""
-echo -e "${BOLD}Summary${NC}"
-echo "-------"
-echo -e "  ${GREEN}Passed: $TOTAL_PASS${NC}"
-[[ $TOTAL_WARN -gt 0 ]] && echo -e "  ${YELLOW}Warnings: $TOTAL_WARN${NC}"
-[[ $TOTAL_FAIL -gt 0 ]] && echo -e "  ${RED}Failed: $TOTAL_FAIL${NC}"
+printf '\n%sSummary%s\n' "$BOLD" "$NC"
+printf -- '-------\n'
+printf '  %sPassed: %s%s\n' "$GREEN" "$TOTAL_PASS" "$NC"
+[[ $TOTAL_WARN -gt 0 ]] && printf '  %sWarnings: %s%s\n' "$YELLOW" "$TOTAL_WARN" "$NC"
+[[ $TOTAL_FAIL -gt 0 ]] && printf '  %sFailed: %s%s\n' "$RED" "$TOTAL_FAIL" "$NC"
 
 if [[ $TOTAL_FAIL -gt 0 ]]; then
-    echo ""
-    echo -e "${RED}Lint failed with $TOTAL_FAIL error(s).${NC}"
+    printf '\n%sLint failed with %s error(s).%s\n' "$RED" "$TOTAL_FAIL" "$NC"
     exit 1
 else
-    echo ""
-    echo -e "${GREEN}All checks passed.${NC}"
+    printf '\n%sAll checks passed.%s\n' "$GREEN" "$NC"
     exit 0
 fi
