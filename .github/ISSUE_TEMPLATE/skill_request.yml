@@ -1,5 +1,6 @@
 name: Skill Request
 description: Propose a new skill for the collection
+title: "[Skill Request] "
 labels: ["enhancement"]
 body:
   - type: input

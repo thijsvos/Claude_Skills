@@ -1,5 +1,6 @@
 name: Bug Report
 description: Report a broken or misbehaving skill
+title: "[Bug] "
 labels: ["bug"]
 body:
   - type: input
@@ -27,11 +28,15 @@ body:
         2. ...
     validations:
       required: true
-  - type: input
+  - type: dropdown
     id: model
     attributes:
       label: Model
       description: Which Claude model were you using?
-      placeholder: e.g., claude-opus-4-7
+      options:
+        - Haiku
+        - Sonnet
+        - Opus
+        - Other / not sure
     validations:
       required: false

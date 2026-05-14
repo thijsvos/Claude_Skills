@@ -9,7 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [0.1.1] - 2026-05-14
 
 ### Changed
-- Bash function comment headers added/expanded across `install.sh` and `lint.sh` (`docstring-check` audit). `install_skill`, `lint_skill`, and `restore_on_exit` now have block-comment headers documenting purpose, args, return semantics, and side effects (mutated globals `PENDING_TARGET`/`PENDING_BACKUP`, counter mutations `TOTAL_*`, EXIT/INT/TERM trap role). `emit`'s mixed block + inline arg comment collapsed into a single block header that notes the deliberate non-mutation of counters (no summary block in install.sh). The shared `pass`/`fail`/`warn` header now documents the load-bearing `TOTAL_FAIL > 0 → exit 1` contract that was previously implicit. `get_frontmatter`'s header tightened to specify the no-output-on-key-absent return convention and the don't-trim-trailing-whitespace contract. Comment-only — no behavior or output changes.
+- Bash function comment headers added/expanded across `install.sh` and `lint.sh` (`docstring-check` audit). Comment-only — no behavior or output changes:
+  - `install_skill`, `lint_skill`, and `restore_on_exit` gained block-comment headers documenting purpose, args, return semantics, and side effects (mutated globals `PENDING_TARGET`/`PENDING_BACKUP`, counter mutations `TOTAL_*`, EXIT/INT/TERM trap role).
+  - `emit`'s mixed block + inline arg comment was collapsed into a single block header that notes the deliberate non-mutation of counters (no summary block in install.sh).
+  - The shared `pass`/`fail`/`warn` header now documents the load-bearing `TOTAL_FAIL > 0 → exit 1` contract that was previously implicit.
+  - `get_frontmatter`'s header was tightened to specify the no-output-on-key-absent return convention and the don't-trim-trailing-whitespace contract.
 
 ## [0.1.0] - 2026-05-14
 

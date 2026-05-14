@@ -4,3 +4,15 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    labels:
+      - "ci"
+      - "dependencies"
+    open-pull-requests-limit: 5
+    # Batch all GitHub Actions updates into a single weekly PR — keeps noise
+    # down given the repo only has one action pinned at a time.
+    groups:
+      actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci"
