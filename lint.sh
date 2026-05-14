@@ -29,16 +29,32 @@ TOTAL_PASS=0
 TOTAL_FAIL=0
 TOTAL_WARN=0
 
-# Use `printf` instead of `echo -e` so behavior is identical across bash
-# builtin / dash / BSD echo. The color variables already hold literal escape
-# bytes thanks to `tput` above (no `\033` literals to interpret).
+# Status-line helpers. Each prints an indented, colored, tagged line to
+# stdout and bumps the corresponding TOTAL_* counter that the summary
+# block at the bottom of the file reads. Args: $1 = message text.
+#   pass: bumps TOTAL_PASS (green [pass] tag).
+#   fail: bumps TOTAL_FAIL (red [fail] tag); a non-zero TOTAL_FAIL is
+#         what causes the script to `exit 1` at the bottom.
+#   warn: bumps TOTAL_WARN (yellow [warn] tag); non-blocking.
+#
+# Implementation note: `printf` instead of `echo -e` so behavior is
+# identical across the bash builtin, dash, and BSD echo. The color
+# variables already hold literal escape bytes from `tput` above (no
+# `\033` literals to interpret).
 pass() { printf '  %s[pass]%s %s\n' "$GREEN"  "$NC" "$1"; TOTAL_PASS=$((TOTAL_PASS + 1)); }
 fail() { printf '  %s[fail]%s %s\n' "$RED"    "$NC" "$1"; TOTAL_FAIL=$((TOTAL_FAIL + 1)); }
 warn() { printf '  %s[warn]%s %s\n' "$YELLOW" "$NC" "$1"; TOTAL_WARN=$((TOTAL_WARN + 1)); }
 
 # Extract a frontmatter field value from a SKILL.md file.
-# Pure-bash implementation so genuine file/read errors aren't swallowed by `|| true`
-# the way they were in the old `sed | grep | head | sed || true` pipeline.
+#
+# Args: $1 = SKILL.md path, $2 = frontmatter key. Returns 0 with no output
+# when the key is absent (callers test with `[[ -z "$x" ]]`). Does NOT trim
+# trailing whitespace; callers normalize via parameter expansion as needed
+# (see the `${tools_val//[[:space:]]/}` comparison further down).
+#
+# Pure-bash implementation so genuine file/read errors aren't swallowed by
+# `|| true` the way they were in the old `sed | grep | head | sed || true`
+# pipeline.
 get_frontmatter() {
     local file="$1" field="$2" line in_fm=0
     while IFS= read -r line; do
@@ -55,6 +71,18 @@ get_frontmatter() {
     done < "$file"
 }
 
+# Run every lint check against a single skill directory.
+#
+# Validates the skill's SKILL.md frontmatter (name/dir agreement, description
+# punctuation, allowed-tools, EnterPlanMode/ExitPlanMode pairing in both
+# frontmatter and body, IMPORTANT subagent block when Agent + Explore are
+# used) and README.md (required sections, line-3 description match, Usage
+# slash-command references, Configuration table rows, allowed-tools parity
+# between SKILL.md frontmatter and README). Side effects: bumps the global
+# TOTAL_PASS/TOTAL_FAIL/TOTAL_WARN counters via the pass/fail/warn helpers,
+# and prints a "Checking: <skill>" banner to stdout. Args: $1 = skill name
+# (a directory under $SKILLS_DIR). Uses bare `return` (not `return 1`) for
+# early-exit on missing SKILL.md/README.md so the outer summary still runs.
 lint_skill() {
     local skill_name="$1"
     local skill_dir="$SKILLS_DIR/$skill_name"
