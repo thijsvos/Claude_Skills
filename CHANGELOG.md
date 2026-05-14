@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **Per-skill `## Example` sections** in every skill README (`skills/*/README.md`), placed between `## Usage` and `## Configuration`. Each example shows a 1-line scenario, the exact invocation, and an abbreviated transcript using the skill's real distinctive output surface (e.g., `code-review`'s `NEEDS CHANGES ✗` verdict, `dep-check`'s `[V1]` vulnerability format, `idiom-check`'s Remediation Bundle table). Long transcripts are wrapped in `<details><summary>Sample output</summary>…</details>` so the README stays scannable.
+- **`Example` column in the root README skills table** with deep-links to each skill's new `#example` anchor — turns the catalogue into a thumbnail gallery.
+- **`templates/README.md`** gains an `## Example` skeleton between Usage and Configuration so new skills inherit the convention.
+- **`create-skill` R11 (README Sections)** documents the new `## Example` section, explicitly noting it's exempt from the `## Usage` cross-skill awk check so handoff examples (e.g., a `github-audit` example referencing `/dep-check`) are safe inside `## Example`.
+- **`lint.sh`** gains a soft `[warn]` if a skill README lacks `## Example` — non-blocking drift prevention modeled on the existing `## Safety` warn rule.
+
 ## [0.2.0] - 2026-05-14
 
 ### Fixed

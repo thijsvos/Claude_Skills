@@ -33,6 +33,49 @@ The skill automatically:
 4. Presents a final recommendation with implementation sketch
 5. Exits plan mode and offers to implement
 
+## Example
+
+Running `/enhance` against a CLI tool repo that has no observability story:
+
+```
+/enhance
+```
+
+<details>
+<summary>Sample recommendation</summary>
+
+```
+### The Enhancement
+Structured JSON logging behind a `--log-format` flag.
+
+### Why This?
+- The tool already emits 14 distinct log lines; teams running it in CI have no way
+  to grep them apart from incidental command output.
+- One small flag unlocks downstream ingestion into Loki/Datadog with zero new deps.
+- Compounds: once logs are structured, every future command inherits observability.
+
+### What You Considered (and Why Not)
+- A full OpenTelemetry tracing layer — overkill for a synchronous CLI.
+- A separate `--verbose` mode — addresses the wrong axis (volume, not structure).
+- A `--metrics` Prometheus exporter — wrong target audience for this tool.
+
+### Implementation Sketch
+Add a `LogFormat` enum to `src/cli/flags.rs`, plumb it into the existing
+`println!`-based emit helpers via a `Logger` struct. Default = `text` (no behavior change);
+`json` emits one line per event with `ts`, `level`, `event`, `fields` keys.
+
+### Expected Impact
+Immediate: CI users can `grep '"level":"error"'`. Compounding: structured logs become
+the substrate for a future `--metrics` exporter or a `replay` subcommand.
+
+### Scope & Path
+**Medium** (~3 hours). Wire flag → write Logger → migrate ~14 call sites → snapshot tests.
+```
+
+</details>
+
+> **Want me to implement this now?**
+
 ## Configuration
 
 | Setting | Value |

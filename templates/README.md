@@ -31,6 +31,29 @@ Or if the skill takes an argument:
 /skill-name <argument description>
 ```
 
+## Example
+
+A one-sentence scenario describing what the skill is being run against:
+
+```
+/skill-name <example argument>
+```
+
+<details>
+<summary>Sample output</summary>
+
+```
+A short, faithful transcript of what the skill prints when it finishes —
+ideally showing its distinctive surface (verdict banner, finding-ID format,
+report headings, action offer). Use real format strings, not invented ones.
+Keep it under ~25 lines so the README stays scannable; the <details> tag
+above already collapses it by default on GitHub.
+```
+
+</details>
+
+> **<Action question> ?** (e.g., "<example response>", "<another example>")
+
 ## Configuration
 
 | Setting | Value |

@@ -205,6 +205,16 @@ lint_skill() {
         warn "README has no Safety section (optional)"
     fi
 
+    # README discoverability: Example section is recommended (non-blocking).
+    # Catches drift on new skills that forget to include sample output, which
+    # is the strongest "is this the skill I need?" signal for users browsing
+    # the catalogue. Non-fatal so existing forks keep linting clean.
+    if grep -qi "## Example" "$readme_md"; then
+        pass "README has section: Example"
+    else
+        warn "README has no Example section (recommended — adds a sample-output transcript)"
+    fi
+
     # README first line description should match SKILL.md description
     # (skip the "# Title" heading — line 3 is the description in the README template).
     # Read exactly three lines natively instead of spawning `sed -n '3p'`; the

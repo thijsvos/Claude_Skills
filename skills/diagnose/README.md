@@ -25,6 +25,54 @@ Performs structured root cause analysis through parallel investigation, delivere
 /diagnose                                 # Auto-detect: check recent test/CI failures
 ```
 
+## Example
+
+Tracking down a runtime TypeError that surfaced after a refactor:
+
+```
+/diagnose "TypeError: Cannot read properties of undefined (reading 'map')"
+```
+
+<details>
+<summary>Sample report</summary>
+
+```
+## Debug Report: TypeError on `users.map(...)` in dashboard render
+
+**Error**: TypeError: Cannot read properties of undefined (reading 'map')
+**Location**: `src/dashboard/UserList.tsx:54` | **Category**: runtime
+
+---
+
+### Root Cause
+
+**[H1]** Empty-response shape changed from `[]` to `undefined` — Confidence: **High**
+`src/api/users.ts:88` — A recent refactor switched the no-users path from `return []`
+to `return data?.users`, but the dashboard still calls `.map(...)` without guarding.
+
+**Evidence:**
+- Commit `a3f12c4` (3 days ago) changed `return users || []` to `return data?.users`.
+- That commit was the last to touch `src/api/users.ts` before the error appeared.
+- `UserList.tsx:54` calls `.map` directly on the response.
+
+**Fix:**
+    const users = (await fetchUsers()) ?? [];
+    return users.map(...);
+
+**Why this fixes it:** Restores the empty-array invariant the caller already depends on.
+
+---
+
+### Alternative Hypotheses
+
+**[H2]** Network failure returning `undefined` instead of throwing — Confidence: Medium
+**[H3]** Race condition on initial render — Confidence: Low
+```
+
+</details>
+
+> **Want me to apply the fix?** (e.g., "apply H1", "let me try H1 first")
+
 ## Configuration
 
 | Setting | Value |

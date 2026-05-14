@@ -40,6 +40,56 @@ Typical flow:
 # It sees the merged PR, switches to cleanup, and deletes the branch.
 ```
 
+## Example
+
+Shipping a small fix from a clean working tree on `main`:
+
+```
+/github-ship
+```
+
+<details>
+<summary>Sample flow</summary>
+
+```
+## Ship Plan
+
+**On**: `main` → `main` on `thijsvos/myapp`
+
+### Actions
+
+- [x] Commit: `Fix off-by-one in pagination cursor`
+- [x] Create branch: `fix/pagination-cursor`
+- [x] Push to origin
+- [ ] Create issue
+- [ ] Create PR linking to the issue
+
+### Issue
+**Title**: Fix off-by-one in pagination cursor
+**Body**: The cursor advance in `paginate.ts` skips the last item on each page boundary …
+
+### Pull Request
+**Title**: Fix off-by-one in pagination cursor
+**Body**:
+> Closes #42
+>
+> ## Summary
+> - Cursor now advances by `pageSize` instead of `pageSize - 1`.
+> …
+
+> **Ship it?** (e.g., "go", "shorten the title")
+
+[After approval]
+
+> **Shipped.**
+> - Issue: https://github.com/thijsvos/myapp/issues/42
+> - PR:    https://github.com/thijsvos/myapp/pull/43
+>
+> Merge the PR on GitHub when ready, then run /github-ship again to clean up.
+```
+
+</details>
+
 ## Configuration
 
 | Setting | Value |
