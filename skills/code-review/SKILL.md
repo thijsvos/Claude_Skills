@@ -15,6 +15,18 @@ You are performing a comprehensive, structured code review. Analyze code changes
 
 **IMPORTANT:** Always quote the user-supplied argument in double quotes when passing it to shell commands.
 
+## Pre-rendered context
+
+These values are computed by the harness before this skill runs (Claude Code dynamic context injection), so Step 1's auto-detect path has the working state in hand without spending a Bash round-trip on commands whose output is the same regardless of the argument:
+
+- **Current branch:** !`git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "(not a git repo)"`
+- **Default branch:** !`git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || git rev-parse --verify main >/dev/null 2>&1 && echo main || git rev-parse --verify master >/dev/null 2>&1 && echo master || echo "(unknown)"`
+- **Staged files:** !`git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | head -20 || echo "(none)"`
+- **Unstaged files:** !`git diff --name-only --diff-filter=ACMR 2>/dev/null | head -20 || echo "(none)"`
+- **Branch ahead of upstream:** !`git log --oneline @{u}.. 2>/dev/null | head -10 || echo "(no upstream or no ahead-commits)"`
+
+If an argument was provided, prefer that argument over the pre-rendered auto-detect data. The pre-rendered context is an optimization for the no-argument path.
+
 ---
 
 ## Step 1: Determine Review Scope

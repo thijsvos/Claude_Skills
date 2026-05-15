@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **Dynamic context injection (`` !`<command>` ``) in 4 skills.** Each skill now pre-renders its deterministic, side-effect-free context-gathering at the top of the body, so the data arrives in Claude's context before the skill body is read — saving a Bash round-trip and a chunk of tokens per invocation.
+  - `/github-ship` pre-renders: in-git-repo, github-remote, gh-authed, current branch, default branch, working-tree state, existing PR for current branch.
+  - `/code-review` pre-renders (auto-detect path only): current branch, default branch, staged files, unstaged files, branch-ahead-of-upstream commits.
+  - `/dep-check` pre-renders (no-arg path only): root-level manifest inventory, C# project files, GitHub Actions workflows, Dockerfiles, tooling pins, renovate/dependabot config presence.
+  - `/github-audit` pre-renders: repo slug (`owner/name`), default branch, license SPDX ID, topics, workflow file list. The slug + default branch are then substituted into the Phase 1 `gh api repos/<slug>/...` paths instead of being re-resolved.
+- **`CLAUDE.md` Quality Standards now documents the dynamic-context-injection idiom.** Specifies when to use it (deterministic, side-effect-free, idempotent commands; no `git push`/`gh pr create`/`npm install`) and when to keep commands in the body (anything that depends on the user's argument or runtime decisions).
+
 ## [0.2.2] - 2026-05-15
 
 ### Fixed

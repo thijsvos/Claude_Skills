@@ -16,6 +16,18 @@ Execute each phase thoroughly before moving to the next. Use subagents for paral
 
 **IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.7, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 
+## Pre-rendered context
+
+The harness pre-renders the repository identity and a few scoping checks (Claude Code dynamic context injection) so Phase 1 doesn't re-run the same `gh` commands. Substitute the resolved `slug`/`default_branch` directly into the API paths in Phase 1's Agent 3.
+
+- **Repo slug (`owner/name`):** !`gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || echo "(gh unavailable or not a github remote)"`
+- **Default branch:** !`gh repo view --json defaultBranchRef --jq .defaultBranchRef.name 2>/dev/null || echo "(unknown)"`
+- **License:** !`gh repo view --json licenseInfo --jq '.licenseInfo.spdxId // "(none detected)"' 2>/dev/null || echo "(gh unavailable)"`
+- **Topics:** !`gh repo view --json repositoryTopics --jq '[.repositoryTopics[].name] | join(",")' 2>/dev/null || echo "(none)"`
+- **Workflows present:** !`ls -1 .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null | head -10 || echo "(none)"`
+
+If `Repo slug` is `(gh unavailable...)`, stop in Phase 1 with an actionable error explaining that `gh` must be authenticated and the remote must be GitHub. Otherwise use the resolved slug in subsequent `gh api repos/<slug>/...` calls.
+
 ---
 
 ## Phase 1: Repository Scan

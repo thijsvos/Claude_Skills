@@ -75,6 +75,7 @@ See `skills/enhance/README.md` as the reference implementation.
 - **Safety-conscious**: Skills that launch subagents should use read-only agent types (e.g., Explore) during analysis phases
 - **Plan-mode discipline**: If a skill enters plan mode, `ExitPlanMode` must be called BEFORE any Edit/Write operation — file modifications are blocked while plan mode is active
 - **Self-contained**: Each skill directory should contain everything needed; avoid cross-skill dependencies
+- **Dynamic context injection where deterministic**: When a skill's first step gathers context that does not depend on the user's argument (e.g., `git rev-parse --abbrev-ref HEAD`, `gh repo view --json ...`, `ls package.json Cargo.toml ...`), pre-render that context in the skill body using `` !`<command>` `` (or fenced ` ```! ` for multi-line). The harness runs the command BEFORE Claude reads the skill content, replacing the placeholder with the output — so Claude sees the pre-rendered values immediately and skips the redundant Bash round-trip. Use only for **fast, side-effect-free, idempotent** commands (no `git push`, no `gh pr create`, no `npm install`). For commands that depend on the user's argument or runtime decisions, keep them in the body so Claude can run them conditionally.
 
 ## Validation
 
