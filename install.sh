@@ -50,6 +50,7 @@ PENDING_BACKUP=""
 # (Ctrl-C between the mv and the ln, or the ln itself failed), atomically
 # moves the backup back into place. Calls `exit "$rc"` with the original
 # exit status so the trap is transparent to `set -euo pipefail`.
+# shellcheck disable=SC2329  # invoked indirectly via the `trap` below.
 restore_on_exit() {
     local rc=$?
     if [[ -n "$PENDING_BACKUP" && -n "$PENDING_TARGET" ]]; then
@@ -58,8 +59,10 @@ restore_on_exit() {
             # the backup is still at the .bak path — otherwise they'll think
             # the install completed and lose track of the recovery file.
             if ! mv "$PENDING_BACKUP" "$PENDING_TARGET"; then
-                printf 'WARNING: failed to restore %s from %s; backup left in place\n' \
-                    "$PENDING_TARGET" "$PENDING_BACKUP" >&2
+                # Print an explicit `mv` recovery command so the user can
+                # paste it directly rather than reconstructing the paths.
+                printf 'WARNING: rollback failed; original is at %s. Restore manually with: mv %q %q\n' \
+                    "$PENDING_BACKUP" "$PENDING_BACKUP" "$PENDING_TARGET" >&2
             fi
         fi
     fi
@@ -122,9 +125,16 @@ install_skill() {
 printf '%sClaude Code Skills Installer%s\n' "$BOLD" "$NC"
 printf '============================\n\n'
 
+# Collect failures across all attempted installs rather than aborting on the
+# first one (mirrors lint.sh's "report and continue, exit non-zero at the
+# end" pattern). Without `|| exit_code=1`, `set -e` would terminate the loop
+# the first time `install_skill` returns 1 — so a typo in one of N arguments
+# would skip every later argument.
+exit_code=0
+
 if [[ $# -gt 0 ]]; then
     for skill in "$@"; do
-        install_skill "$skill"
+        install_skill "$skill" || exit_code=1
     done
 else
     printf 'Installing all skills from %s:\n\n' "$SKILLS_DIR"
@@ -134,10 +144,11 @@ else
     for skill_dir in "$SKILLS_DIR"/*/; do
         skill_name="${skill_dir%/}"
         skill_name="${skill_name##*/}"
-        install_skill "$skill_name"
+        install_skill "$skill_name" || exit_code=1
     done
     shopt -u nullglob
 fi
 
 printf '\nDone. Skills are symlinked from ~/.claude/skills/ to this repository.\n'
 printf "Run 'git pull' in this repo to update skills.\n"
+exit "$exit_code"
