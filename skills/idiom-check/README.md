@@ -90,7 +90,7 @@ Auditing a Rust crate where parser code clones strings unnecessarily:
 | Model | `opus` |
 | Effort | `max` |
 | Takes argument | No |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 

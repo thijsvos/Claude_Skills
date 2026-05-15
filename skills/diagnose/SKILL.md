@@ -1,7 +1,7 @@
 ---
 name: diagnose
 description: Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses.
-allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 takes-arg: true
@@ -283,5 +283,11 @@ If the user requests a fix:
 3. If tests exist for the affected code, suggest running them:
    > Run `<test command>` to verify the fix resolves the issue.
 4. If the user reports the fix for H1 didn't work, suggest trying H2
+
+**Skill handoff.** After a fix is applied successfully, offer to write a regression test so the bug can't return:
+
+> **Next:** Want me to hand off to `/test-gen` for `<file>` to write a regression test that pins the bug shut? Useful when the affected code wasn't covered before.
+
+Use the `Skill` tool to invoke `/test-gen` if the user agrees. Skip the offer when the fix is purely configuration/environmental (no code path to regression-test) or when the user already runs `/test-gen` regularly.
 
 If no hypothesis has a code fix (e.g., environmental issue), provide the exact steps the user should take to resolve it.

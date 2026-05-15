@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **Cross-skill handoffs via the `Skill` tool in 5 skills.** Previously only `github-audit` wired any handoffs. Now:
+  - `/code-review` → offers `/refactor` after fixes are applied (when structural smells go beyond the diff).
+  - `/diagnose` → offers `/test-gen` after a fix lands (write a regression test for the bug).
+  - `/refactor` → offers `/test-gen` after refactoring (refresh tests for renamed/restructured surfaces).
+  - `/idiom-check` → offers `/code-review` on each bundle PR (independent second pass before merge).
+  - `/dep-check` → offers `/test-gen` after major version bumps (cover the breaking-change surface).
+  Each handoff is gated on signal (only offered when warranted) and requires user approval before firing. `Skill` added to `allowed-tools` in both SKILL.md frontmatter and the README's `Allowed tools` row for each skill.
+- **`code-review` now declares `AskUserQuestion` in `allowed-tools`** alongside `Skill` (the action-offer step needs it for the structured handoff offer). Previously the body asked questions inline via prose only.
+- **`CLAUDE.md` Quality Standards section documents the Cross-skill handoffs pattern** — when to wire it (genuine workflow chaining), how it's gated (offer only when warranted), and the interaction model (user must approve the handoff before it fires).
+
 ## [0.2.2] - 2026-05-15
 
 ### Fixed

@@ -1,7 +1,7 @@
 ---
 name: refactor
 description: Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes.
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 takes-arg: true
@@ -366,6 +366,12 @@ If the repository has uncommitted changes outside the refactoring scope, warn th
    >
    > Run `git diff` to review the changes before committing.
 
+   **Skill handoff.** After a successful refactor, offer to refresh tests for the touched modules — particularly when the refactoring renamed or restructured public surfaces:
+
+   > **Next:** Want me to hand off to `/test-gen` for the modified files to refresh test coverage and pick up any new branches the refactor introduced?
+
+   Use the `Skill` tool to invoke `/test-gen` if the user agrees. Skip the offer when the refactor was purely internal (e.g., a constant rename inside one function) and existing tests already exercise the surface.
+
 7. **If tests fail**, report which tests failed and diagnose the likely cause:
    > **<P> tests passed, <F> failed.** The failure appears related to [R4] (<brief diagnosis>).
    >
@@ -376,5 +382,9 @@ If the repository has uncommitted changes outside the refactoring scope, warn th
 
 8. **If no test runner is available:**
    > **All changes applied.** No test runner detected — review changes manually with `git diff` before committing.
-   >
-   > Consider running `/test-gen` to create tests for the refactored code.
+
+   **Skill handoff.** Offer to bootstrap a test infrastructure via `/test-gen` (which detects no-framework repos and proposes setup):
+
+   > **Next:** No test framework detected. Want me to hand off to `/test-gen` to scaffold one and write tests for the refactored modules?
+
+   Use the `Skill` tool to invoke `/test-gen` if the user agrees.

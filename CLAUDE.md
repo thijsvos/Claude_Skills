@@ -75,6 +75,7 @@ See `skills/enhance/README.md` as the reference implementation.
 - **Safety-conscious**: Skills that launch subagents should use read-only agent types (e.g., Explore) during analysis phases
 - **Plan-mode discipline**: If a skill enters plan mode, `ExitPlanMode` must be called BEFORE any Edit/Write operation — file modifications are blocked while plan mode is active
 - **Self-contained**: Each skill directory should contain everything needed; avoid cross-skill dependencies
+- **Cross-skill handoffs**: When a skill's primary action naturally chains into another installed skill (e.g., `/code-review` → `/refactor`, `/diagnose` → `/test-gen`, `/refactor` → `/test-gen`), declare `Skill` in `allowed-tools` and add a "Skill handoff" offer after the primary action completes. Offer the handoff only when there's genuine signal that the next skill adds value — never as a generic catch-all. The user must approve before the handoff fires.
 
 ## Validation
 
