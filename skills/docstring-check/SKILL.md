@@ -1,6 +1,7 @@
 ---
 name: docstring-check
 description: Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies behavior-preserving fixes matching the project's detected convention.
+when_to_use: Use when the user asks about missing/outdated docstrings, signature-vs-doc drift, docstring coverage on the public API, or wants to align documentation to a detected project style (Google/NumPy/reST/TSDoc/JSDoc/godoc/rustdoc/Javadoc).
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max

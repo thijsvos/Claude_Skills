@@ -1,6 +1,7 @@
 ---
 name: refactor
 description: Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes.
+when_to_use: Use when the user wants to refactor a specific file/module/function — distinct from /code-review (which works on a diff) and /idiom-check (which audits the whole codebase through one language lens).
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max

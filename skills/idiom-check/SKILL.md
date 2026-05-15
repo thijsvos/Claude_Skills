@@ -1,6 +1,7 @@
 ---
 name: idiom-check
 description: Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles.
+when_to_use: Use when the user asks for a language-specific idiom audit (e.g., "are we writing idiomatic Rust", "is this Pythonic", "Go-style review") of the whole codebase. Distinct from /code-review (which works on a diff) and /refactor (single target).
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
@@ -167,7 +168,7 @@ In your prompt to each agent, explicitly include:
 
 ## Step 3: Synthesize Severity-Sorted Report
 
-Collect all findings from the 3 agents and produce a single, prioritized report.
+Collect all findings from the 3 agents and produce a single, prioritized report. **ultrathink** during deduplication and prioritization — multiple agents may flag the same code for related-but-different reasons, and the synthesis quality depends on resolving those overlaps thoughtfully.
 
 **Synthesis rules:**
 

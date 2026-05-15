@@ -1,6 +1,7 @@
 ---
 name: diagnose
 description: Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses.
+when_to_use: Use when the user pastes an error message or stack trace, reports unexpected behavior, asks "why is X failing", or wants help finding the root cause of a CI/test failure.
 allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
@@ -196,6 +197,8 @@ Search for broader context: similar patterns, known issues, and environmental fa
 ---
 
 ## Step 3: Synthesize Diagnosis
+
+**ultrathink** when ranking the hypotheses — the goal is to reason through evidence chains carefully so the top hypothesis is genuinely the most likely cause, not the loudest signal.
 
 Collect all findings from the 3 agents and produce a single, structured diagnosis report.
 
