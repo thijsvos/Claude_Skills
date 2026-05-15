@@ -96,7 +96,7 @@ Shipping a small fix from a clean working tree on `main`:
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Takes argument | No |
+| Argument hint | No |
 | Allowed tools | Read, Grep, Glob, Bash, AskUserQuestion, EnterPlanMode, ExitPlanMode |
 
 No `Edit` or `Write` — all changes run through `git` or `gh`.

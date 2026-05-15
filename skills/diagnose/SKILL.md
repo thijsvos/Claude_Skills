@@ -4,7 +4,7 @@ description: Multi-agent root cause analysis that traces errors, correlates with
 allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[error | path | identifier]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.

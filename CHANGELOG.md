@@ -15,7 +15,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **Migrated all skills from the repo-internal `takes-arg` field to the official Claude Code `argument-hint` field.** `takes-arg: true` was a documentation-only convention this repo invented; Claude Code never recognized it. Skills now declare `argument-hint: "[hint]"` (e.g., `code-review` → `[path | identifier | ref | range]`) which surfaces in `/<skill> <Tab>` autocomplete. The 7 affected skills: `code-review`, `create-skill`, `dep-check`, `diagnose`, `docstring-check`, `refactor`, `test-gen`.
+- **Documented the full official Claude Code skill frontmatter in `CLAUDE.md`.** Previously the optional-fields table listed 4 fields (`model`, `effort`, `disable-model-invocation`, `takes-arg`); it now lists every Claude Code-supported field (`argument-hint`, `arguments`, `when_to_use`, `paths`, `disable-model-invocation`, `user-invocable`, `context`, `agent`, `hooks`, `shell`) with the body-substitution table (`$ARGUMENTS`, `$N`, `$<name>`, `${CLAUDE_*}`) and dynamic context injection syntax (`` !`<command>` ``).
+- **`templates/SKILL.md` and `templates/README.md` updated to the new spec.** Template frontmatter now shows `argument-hint`, `arguments`, `when_to_use`, `paths`, `user-invocable`, `context`, `agent` as commented-out optional fields. Configuration table row renamed from `Takes argument` to `Argument hint`.
+- **All 11 skill READMEs renamed `Takes argument` row to `Argument hint`** with the matching hint string (or `No` for skills that take no argument).
+- **`create-skill`'s embedded R1–R13 reference updated to match the new spec.** R1 frontmatter table now documents `argument-hint`, `arguments`, `when_to_use`, `paths`, `user-invocable`, `context`, `agent`. R3 ARGUMENTS-line guidance, R9 argument-resolution cascade, and R11 README configuration table all use the new field name.
 - **Standardized "Strengths" callouts to "Looks Good" across every skill.** `code-review` and `idiom-check` already used "Looks Good"; `docstring-check` and `refactor` used the synonymous "Strengths". Picked "Looks Good" as the project-wide name. Affects 8 occurrences in `docstring-check/SKILL.md`, 2 in `refactor/SKILL.md`, and 1 in `refactor/README.md`.
+
+### Added
+
+- **`lint.sh` enforces the new `argument-hint` contract.** The single-pass SKILL.md scanner now extracts the `argument-hint` value (passes when present) and the legacy `takes-arg` flag (warns when present so authors know to migrate). The README scanner now looks for the new `Argument hint` row and warns separately when it sees the legacy `Takes argument` row.
 
 ## [0.2.2] - 2026-05-15
 

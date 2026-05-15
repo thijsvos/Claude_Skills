@@ -4,7 +4,7 @@ description: Comprehensive code refactoring across correctness, security, perfor
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[path | identifier | branch | range]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
