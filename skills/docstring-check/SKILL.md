@@ -4,7 +4,7 @@ description: Scans a codebase for missing, outdated, drifted, or inconsistent do
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[path | symbol | branch | range]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
@@ -150,7 +150,7 @@ Each agent must return findings in this structured format:
 - **Confidence**: High / Medium / Low (how certain the agent is this is a real issue)
 - **Severity**: Critical / High / Medium / Low
 
-Each agent must also return 2-3 **"Strengths"** callouts — symbols that are already well-documented and should NOT be changed. This prevents unnecessary rewrites and acknowledges good practice.
+Each agent must also return 2-3 **"Looks Good"** callouts — symbols that are already well-documented and should NOT be changed. This prevents unnecessary rewrites and acknowledges good practice.
 
 ---
 
@@ -182,7 +182,7 @@ Identify symbols that lack docstrings entirely, with emphasis on the public API 
 
 Skip: test files, generated code, `__init__.py` files that only re-export, trivial getters/setters in some languages if the convention is to skip them. Respect `.gitignore`.
 
-Return findings sorted by severity (Critical first), and 2-3 Strengths callouts (e.g., "The public API of `src/auth/` is consistently documented at the module level").
+Return findings sorted by severity (Critical first), and 2-3 Looks Good callouts (e.g., "The public API of `src/auth/` is consistently documented at the module level").
 
 ---
 
@@ -213,7 +213,7 @@ For every function/method that *has* a docstring in the scoped files, verify it 
 
 For each finding, provide the corrected docstring that reflects the current code. Do not speculate about the original author's intent — describe what the code actually does now.
 
-Return findings and 2-3 Strengths callouts (e.g., "The database layer's docstrings consistently and accurately document thrown exceptions").
+Return findings and 2-3 Looks Good callouts (e.g., "The database layer's docstrings consistently and accurately document thrown exceptions").
 
 ---
 
@@ -242,7 +242,7 @@ Flag docstrings that deviate from the project's detected style or lack the infor
 
 For each finding, provide the rewritten docstring that matches the project's detected style.
 
-Return findings and 2-3 Strengths callouts (e.g., "All public functions in `src/api/` consistently follow Google-style with Args/Returns/Raises sections").
+Return findings and 2-3 Looks Good callouts (e.g., "All public functions in `src/api/` consistently follow Google-style with Args/Returns/Raises sections").
 
 ---
 
@@ -341,7 +341,7 @@ Raises:
 
 ---
 
-### Strengths (do not change)
+### Looks Good (do not change)
 
 - <Callout from Agent 1 — well-covered area>
 - <Callout from Agent 2 — accurately maintained docstrings>

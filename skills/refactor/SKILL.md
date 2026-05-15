@@ -4,7 +4,7 @@ description: Comprehensive code refactoring across correctness, security, perfor
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[path | identifier | branch | range]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
@@ -133,7 +133,7 @@ Each agent must return findings in this structured format:
 - **Confidence**: High / Medium / Low (how certain the agent is that this is an actual issue)
 - **Risk**: Safe (behavior-preserving, no regression possible) / Moderate (behavior-preserving but context-dependent) / Breaking (intentionally changes behavior for correctness or security)
 
-Each agent must also return 2-3 **"Strengths"** callouts — things the code already does well in their analysis dimension that should NOT be changed. This prevents unnecessary refactoring and acknowledges good practices.
+Each agent must also return 2-3 **"Looks Good"** callouts — things the code already does well in their analysis dimension that should NOT be changed. This prevents unnecessary refactoring and acknowledges good practices.
 
 ---
 
@@ -307,7 +307,7 @@ Collect all findings from the 3 agents and produce a single, structured refactor
 
 - [R5] depends on [R2] (extraction must happen before the security fix)
 
-### Strengths (do not change)
+### Looks Good (do not change)
 
 - <Positive observation from Correctness & Security agent>
 - <Positive observation from Performance & Efficiency agent>

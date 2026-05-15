@@ -1,10 +1,10 @@
 ---
 name: code-review
 description: Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers.
-allowed-tools: Read, Grep, Glob, Bash, Agent, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[path | identifier | ref | range]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.

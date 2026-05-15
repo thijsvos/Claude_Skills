@@ -67,7 +67,7 @@ The `===` comparison is variable-time; switch to `crypto.timingSafeEqual` to clo
 
 ---
 
-### Strengths
+### Looks Good
 
 - Rate-limit middleware is correctly applied to `/login` and `/refresh` only.
 - Error responses do not leak internal detail to clients.
@@ -83,7 +83,7 @@ The `===` comparison is variable-time; switch to `crypto.timingSafeEqual` to clo
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Takes argument | Yes (optional: file path, directory, function name, branch, commit range, or description) |
+| Argument hint | `[path \| identifier \| branch \| range]` (optional: file path, directory, function name, branch, commit range, or description) |
 | Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode |
 
 ## Safety

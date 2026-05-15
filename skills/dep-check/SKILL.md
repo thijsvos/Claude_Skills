@@ -4,7 +4,7 @@ description: Scans all dependency declarations across ecosystems, checks for upd
 allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[manifest | directory | ecosystem]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
@@ -83,7 +83,7 @@ Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: 
 
 Provide each agent with the complete list of discovered manifest files, their full contents, the dependency names, current versions, version constraints, and the detected ecosystems from Step 1.
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"`. The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis.
+**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.7, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 
 ---
 

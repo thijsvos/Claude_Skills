@@ -4,7 +4,7 @@ description: Interactive skill generator that scaffolds new skills following all
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[skill description]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
@@ -48,8 +48,14 @@ Every `SKILL.md` must begin with YAML frontmatter between `---` delimiters.
 
 | Field | Default | When to use |
 |-------|---------|-------------|
-| `takes-arg` | `false` | Set `true` if the skill accepts a user argument |
+| `argument-hint` | (none) | Set when the skill accepts an argument. Value is the autocomplete display string (e.g., `[target]` or `[path \| identifier]`). The README's `Argument hint` row must mirror this. **Replaces the legacy repo-internal `takes-arg` field**, which Claude Code never recognized. |
+| `arguments` | (none) | Optional named positional arguments for `$name` substitution in the body. With `arguments: [target]`, the body can reference `$target` to inline the first argument. |
+| `when_to_use` | (none) | Additional trigger-phrase guidance for auto-invocation. Useful when `description` alone would mismatch user requests. |
+| `paths` | (none) | Glob patterns that auto-activate the skill when working with matching files (e.g., `["**/*.test.*"]` for a testing skill). |
 | `disable-model-invocation` | `false` | Controls whether other models/skills may auto-invoke this skill via discovery/matching. Set `true` to keep the skill strictly user-triggered (the user must type `/<skill-name>` themselves). This does NOT prevent the skill from launching subagents via the `Agent` tool. Rarely needed — only `enhance` uses this in the current collection, to avoid being matched as a generic "improve the project" trigger. |
+| `user-invocable` | `true` | Set `false` to hide the skill from the `/` menu (background-knowledge skills only Claude should invoke). The inverse of `disable-model-invocation`. |
+| `context` | (none) | Set to `fork` to run the skill in a forked subagent context. The skill body becomes the subagent's prompt. |
+| `agent` | `general-purpose` | When `context: fork` is set, picks the subagent type (`Explore`, `Plan`, `general-purpose`, or any custom agent in `.claude/agents/`). |
 
 ---
 
@@ -101,12 +107,12 @@ The body follows this order after the frontmatter:
 
 2. **Mission statement** — 1-3 sentences describing what the skill does and its approach.
 
-3. **ARGUMENTS line** (only if `takes-arg: true`):
+3. **ARGUMENTS line** (only if `argument-hint` is declared):
    ```
    **ARGUMENTS:** The user may provide an optional <description of what the argument can be>. If no argument is provided, <fallback behavior>.
    ```
 
-4. **IMPORTANT: Quoting** (only if `takes-arg: true`):
+4. **IMPORTANT: Quoting** (only if `argument-hint` is declared):
    ```
    **IMPORTANT:** Always quote the user-supplied argument in double quotes when passing it to shell commands.
    ```
@@ -267,7 +273,7 @@ After exiting plan mode, ask the user what to do. The question must be:
 
 ### R9: Argument Resolution Cascade
 
-Skills with `takes-arg: true` resolve the argument in a priority order. The standard cascade:
+Skills that accept an argument (declare `argument-hint`) resolve it in a priority order. The standard cascade:
 
 1. **File path** — `test -f "<arg>"`
 2. **Directory path** — `test -d "<arg>"`
@@ -319,7 +325,7 @@ Every skill's `README.md` must contain these sections **in this order**:
 3. **Requirements** — model access, dependencies, prerequisites
 4. **Usage** — how to invoke (e.g., `/<skill-name>` or `/<skill-name> <argument>`). Examples MUST use the skill's actual name in the slash command.
 5. **Example** — a 1-line scenario, the exact invocation, and a faithful abbreviated transcript wrapped in `<details><summary>Sample output</summary>…</details>`. Use the skill's real format strings (verdict banners, finding-ID prefix, report headings) so users can recognize the output before they install. Avoid `## Usage`-style slash-command lines that reference OTHER skills inside `## Usage` (the linter scans Usage for cross-skill references); `## Example` is exempt from that check by design. Keep the visible part under ~25 lines.
-6. **Configuration** — table of frontmatter settings. Required rows: `Model`, `Effort`, `Takes argument`, `Allowed tools`. The `Allowed tools` row must list the SAME tools as the SKILL.md `allowed-tools` frontmatter (including `EnterPlanMode`/`ExitPlanMode` if they're there).
+6. **Configuration** — table of frontmatter settings. Required rows: `Model`, `Effort`, `Argument hint`, `Allowed tools`. The `Allowed tools` row must list the SAME tools as the SKILL.md `allowed-tools` frontmatter (including `EnterPlanMode`/`ExitPlanMode` if they're there). The `Argument hint` row should mirror the SKILL.md `argument-hint` value, or say `No` for skills that take no argument.
 7. **Safety** — bullet points with bold labels describing what the skill can and cannot do
 
 The **Safety** section uses this pattern:

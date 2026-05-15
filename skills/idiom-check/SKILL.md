@@ -301,7 +301,18 @@ gh auth status 2>&1 | grep -q "Logged in" || echo "gh_not_authenticated"
 git status --porcelain
 ```
 
-If the working tree is dirty, stop and ask the user whether to stash (`git stash push -m "idiom-check: pre-bundle stash"`) or abort. If `gh` is not authenticated or the remote is not GitHub, stop with an actionable error.
+If the working tree is dirty, stop and ask the user whether to stash or abort. When stashing, use the explicit-SHA `git stash create` + `git stash store` pattern (consistent with `/refactor` and `/docstring-check`) so the snapshot can be restored reliably later — `git stash push` exits 0 even when there's nothing to stash, which makes a "revert all" hard to reason about:
+
+```bash
+backup_sha=$(git stash create "idiom-check-backup: pre-bundle stash" 2>/dev/null)
+if [ -n "$backup_sha" ]; then
+  git stash store -m "idiom-check-backup: pre-bundle stash" "$backup_sha"
+fi
+```
+
+Record `$backup_sha` so the user can `git stash apply "$backup_sha"` later if they want the pre-bundle state back. If `$backup_sha` is empty, the working tree was clean — proceed without a backup.
+
+If `gh` is not authenticated or the remote is not GitHub, stop with an actionable error.
 
 **Resolve the default branch:**
 

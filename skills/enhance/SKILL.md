@@ -21,19 +21,31 @@ Execute each phase thoroughly before moving to the next. Use subagents for paral
 
 ## Phase 1: Deep Project Reconnaissance
 
-Perform a comprehensive scan of the project. Launch multiple exploration agents in parallel to cover all of these:
+Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: "opus"`) covering three orthogonal lenses on the project. The IMPORTANT block above governs how every subagent must be configured.
 
-**Structure & Stack**
+Each agent should return a structured digest of its findings. The synthesis in Phase 5 will weight hotspot files higher, flag single-author areas as bus-factor risk, treat deleted files as evidence of abandoned approaches, and use velocity as a proxy for capacity to absorb change.
+
+---
+
+### Agent 1: Structure & Stack
+
+Map the project's shape and the tools it's built from:
+
 - Explore the full directory tree to understand the project layout
-- Read all config/manifest files (package.json, Cargo.toml, pyproject.toml, go.mod, Makefile, docker-compose.yml, etc.)
+- Read all config/manifest files (`package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, `Makefile`, `docker-compose.yml`, etc.)
 - Identify the tech stack, frameworks, languages, and key dependencies
 - Map the architecture: entry points, core modules, data flow, and key abstractions
 
-**Documentation & Intent**
-- Read README, CLAUDE.md, CONTRIBUTING.md, docs/, and any project documentation
-- Look for ADRs (Architecture Decision Records), changelogs, or design docs
+Return: a one-paragraph architecture summary, the key dependencies + versions, and the 5-10 most important files (entry points, central modules) for downstream agents to assume as context.
 
-**History & Trajectory**
+---
+
+### Agent 2: Documentation, Intent & History
+
+Recover the *why* behind the project plus the quantitative trajectory of the work:
+
+- Read `README`, `CLAUDE.md`, `CONTRIBUTING.md`, `docs/`, and any project documentation
+- Look for ADRs (Architecture Decision Records), changelogs, or design docs
 
 If the project is a git repository, run these specific git commands to get quantitative data:
 
@@ -51,17 +63,26 @@ git log --format=format: --name-only --diff-filter=D --since=12.months 2>/dev/nu
 git log --oneline --since=3.months 2>/dev/null | wc -l
 ```
 
-If the project has no git history, skip these commands and note the absence of version control as a finding.
+If the project has no git history, skip the commands and note the absence of version control as a finding.
 
-Interpret the results: hotspot files should be weighted higher in Phase 3 gap analysis. Single-author areas should be flagged as risk. Deleted files reveal abandoned approaches to avoid re-suggesting. Velocity indicates project momentum and capacity for change.
+Return: stated project purpose and target audience, the top 10 hotspot files, contributor distribution shape (single-maintainer vs. distributed), recent deletions, and velocity bucket (dormant / steady / active).
 
-**Quality & Gaps**
+---
+
+### Agent 3: Quality & Gaps
+
+Find what's missing, broken, or rotting:
+
 - Examine test coverage: what's tested, what's not, testing patterns used
-- Check CI/CD setup (GitHub Actions, etc.)
-- Search for TODO, FIXME, HACK, XXX, WORKAROUND markers across the codebase
+- Check CI/CD setup (GitHub Actions, GitLab CI, CircleCI, etc.)
+- Search for `TODO`, `FIXME`, `HACK`, `XXX`, `WORKAROUND` markers across the codebase
 - Look for dead code, unused dependencies, or stale configuration
 
-Compile your findings into a mental model of the project before proceeding.
+Return: a coverage summary (which areas have tests, which don't), the CI surface (what runs, what doesn't), the count and rough distribution of in-code TODO/FIXME markers, and any obvious quality cliffs (e.g., a module with zero tests despite high churn).
+
+---
+
+Compile the three returns into a mental model of the project before proceeding.
 
 ---
 
