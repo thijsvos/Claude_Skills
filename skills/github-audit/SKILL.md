@@ -1,6 +1,7 @@
 ---
 name: github-audit
 description: Audits a GitHub repository against best practices and provides prioritized recommendations for README, license, community health, CI/CD, and repository settings.
+when_to_use: Use when the user asks for a GitHub repo audit, wants to evaluate README/license/community-health/CI-CD coverage, or asks "is this repo ready for public release".
 allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max

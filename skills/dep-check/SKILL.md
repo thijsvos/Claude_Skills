@@ -1,6 +1,7 @@
 ---
 name: dep-check
 description: Scans all dependency declarations across ecosystems, checks for updates and vulnerabilities, and produces a prioritized update plan with testing recommendations.
+when_to_use: Use when the user asks about outdated dependencies, package CVEs, pinned-version freshness, dependabot/renovate gaps, or wants an upgrade plan across ecosystems (npm, pip, cargo, go, gem, composer, docker, GitHub Actions).
 allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
@@ -270,6 +271,13 @@ For dependencies with major version updates available (identified by Agent 1), a
 - Use WebSearch to find the changelog or migration guide: `<package> <current_major> to <latest_major> migration guide`
 - Categorize the effort: **drop-in** (likely no code changes needed), **minor migration** (configuration or import changes), **significant migration** (API changes requiring code rewrites)
 - Note any dependencies that have been deprecated or archived
+
+**Effort gate** for the WebSearch step (`${CLAUDE_EFFORT}`):
+- `max` / `xhigh` / `high` — perform breaking-change WebSearch lookups for every major bump (default).
+- `medium` — limit lookups to dependencies with ≥3 major versions of drift (e.g. v2 → v5).
+- `low` / `min` — skip WebSearch lookups entirely; report each major bump as "breaking change risk: not assessed (effort=${CLAUDE_EFFORT})" and recommend the user re-run at higher effort or consult the changelog manually.
+
+This avoids serializing 10+ WebSearch calls during a quick `/dep-check` while preserving the deep-dive when the user asked for one.
 
 Return findings as two structured lists:
 1. **Vulnerabilities** — sorted by severity (critical first)

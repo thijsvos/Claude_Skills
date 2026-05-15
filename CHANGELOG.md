@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **`when_to_use` frontmatter on every auto-invocable skill (10 of 11).** Each skill now declares 1-2 sentences of trigger-phrase guidance complementing `description`, so Claude has stronger signal when matching a user request to a skill. Examples: `/code-review` triggers on "is this ready to merge"; `/diagnose` triggers on a pasted stack trace; `/dep-check` triggers on "outdated dependencies" / "package CVEs". `/enhance` is excluded — it has `disable-model-invocation: true` so auto-invocation matching does not apply.
+- **`ultrathink` keyword in synthesis steps of 3 strategic skills.** Including `ultrathink` anywhere in skill content requests deeper reasoning ([per docs](https://code.claude.com/docs/en/model-config#use-ultrathink-for-one-off-deep-reasoning)). Added to `/enhance` Phase 5 (Innovation Synthesis), `/diagnose` Step 3 (hypothesis ranking), and `/idiom-check` Step 3 (deduplication + prioritization across 3 agent reports). The skills where the synthesis step's quality drives the entire output's value.
+- **`${CLAUDE_EFFORT}` substitution for adaptive depth in 2 skills.** `/code-review` Step 2 now scales the agent's file-reading depth to effort: max/xhigh/high read full files (current default behavior), medium/low/min read changed hunks plus ~50 surrounding lines. `/dep-check` Agent 3 scales the breaking-change WebSearch step similarly: max/xhigh/high check every major bump, medium only ≥3-version drift, low/min skip entirely. Both modes annotate the report header so users know depth was reduced.
+
+### Notes
+
+- **`paths` frontmatter intentionally not adopted.** Initial plan was to add `paths` globs to `/test-gen` and `/docstring-check` for path-based auto-activation. On reflection, both skills naturally apply to "any source file", which is too broad to be a useful narrowing trigger — `paths` shines for narrowly-scoped skills (e.g., a "rails-helper" skill matching `**/*.rb`), not for general-purpose code skills. Skipping unless a future skill emerges that benefits from it.
+
 ## [0.2.2] - 2026-05-15
 
 ### Fixed

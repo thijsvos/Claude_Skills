@@ -1,6 +1,7 @@
 ---
 name: create-skill
 description: Interactive skill generator that scaffolds new skills following all project conventions, serving as the definitive reference for skill creation.
+when_to_use: Use when the user wants to create a new Claude Code skill, asks how to package a workflow as a skill, or describes a repeatable procedure they want callable as `/something`.
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max

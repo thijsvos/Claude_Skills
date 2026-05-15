@@ -1,6 +1,7 @@
 ---
 name: code-review
 description: Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers.
+when_to_use: Use when the user asks for a review of pending changes, wants a verdict on a diff, asks "is this ready to merge", or names a file/branch/commit-range to review.
 allowed-tools: Read, Grep, Glob, Bash, Agent, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
@@ -86,6 +87,12 @@ Provide each agent with:
 **IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.7, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 
 **IMPORTANT:** Instruct each agent to read the **full files** being changed (not just the diff hunks) so they understand the surrounding context, module purpose, and how the changes integrate with existing code.
+
+**Effort gate.** Adapt the file-reading depth to the active effort level via `${CLAUDE_EFFORT}`:
+- `max` / `xhigh` / `high` — read full files for every changed module (default; current behavior).
+- `medium` / `low` / `min` — read the changed hunks plus the immediate surrounding ~50 lines of context, not the full files. The review report header should note this as `read scope: hunks+context (effort=${CLAUDE_EFFORT})` so the user knows the depth was reduced.
+
+This avoids the "max-effort review for a one-line typo fix" wall-clock penalty without compromising deep reviews when the user asked for them.
 
 Each agent must return findings in this structured format:
 - **Severity**: Critical / Warning / Suggestion

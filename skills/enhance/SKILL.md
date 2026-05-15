@@ -120,7 +120,7 @@ Generate a broad list of potential improvements and opportunities. Don't filter 
 
 ## Phase 5: Innovation Synthesis
 
-Now converge. This is the creative, strategic phase:
+Now converge. This is the creative, strategic phase — **ultrathink** about which idea matters most:
 
 - **Cross-pollinate**: What ideas from adjacent domains or different ecosystems could apply here?
 - **Emerging patterns**: What new techniques or technologies are relevant to this stack that the project hasn't adopted?
