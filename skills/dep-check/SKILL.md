@@ -16,6 +16,19 @@ You are performing a comprehensive dependency audit across all ecosystems presen
 
 **IMPORTANT:** Always quote the user-supplied argument in double quotes when passing it to shell commands.
 
+## Pre-rendered context
+
+The harness pre-renders manifest discovery (Claude Code dynamic context injection), so Step 1 starts with the ecosystem inventory already in hand. This is fast deterministic shell — no point spending a Bash round-trip on it.
+
+- **Root-level manifests present:** !`ls -1 package.json Cargo.toml pyproject.toml setup.py setup.cfg requirements.txt Pipfile go.mod Gemfile pom.xml build.gradle build.gradle.kts composer.json Package.swift 2>/dev/null || echo "(none at root)"`
+- **C# project files (depth ≤3):** !`find . -maxdepth 3 -type f -name '*.csproj' 2>/dev/null | head -5 || echo "(none)"`
+- **GitHub Actions workflows:** !`ls -1 .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null | head -10 || echo "(none)"`
+- **Dockerfile(s):** !`find . -maxdepth 3 -type f \( -name 'Dockerfile' -o -name 'Dockerfile.*' -o -name 'docker-compose*.yml' -o -name 'compose*.yml' \) 2>/dev/null | head -10 || echo "(none)"`
+- **Tooling pins:** !`ls -1 .tool-versions .nvmrc .node-version .python-version .ruby-version .pre-commit-config.yaml 2>/dev/null || echo "(none)"`
+- **Renovate / dependabot config:** !`ls -1 .github/dependabot.yml .github/dependabot.yaml renovate.json renovate.json5 .renovaterc 2>/dev/null || echo "(none)"`
+
+If an argument was provided, scope the scan accordingly and treat the pre-rendered list as background context. If no argument was provided, use the pre-rendered list as the starting inventory and skip the redundant ecosystem-discovery shell calls in Step 1.
+
 ---
 
 ## Step 1: Discover Ecosystems and Manifest Files

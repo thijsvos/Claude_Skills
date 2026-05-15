@@ -16,32 +16,28 @@ You automate a GitHub issue + PR workflow. The user runs you with no arguments. 
 
 You never merge the PR yourself — that is always the user's action on GitHub.
 
+## Pre-rendered context
+
+These values are computed by the harness before this skill runs (via Claude Code's dynamic context injection), so Step 1 has the data it needs without an extra Bash round-trip:
+
+- **In a git repo?** !`git rev-parse --is-inside-work-tree 2>/dev/null || echo "no"`
+- **GitHub remote?** !`git remote get-url origin 2>/dev/null | grep -qE 'github\.com[:/]' && echo "yes" || echo "no"`
+- **gh authed?** !`gh auth status 2>&1 | grep -q "Logged in" && echo "yes" || echo "no"`
+- **Current branch:** !`git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "(unavailable)"`
+- **Default branch:** !`git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || git rev-parse --verify main >/dev/null 2>&1 && echo main || git rev-parse --verify master >/dev/null 2>&1 && echo master || echo "(unknown)"`
+- **Working tree:** !`if [ -n "$(git status --porcelain 2>/dev/null)" ]; then echo "DIRTY ($(git status --porcelain 2>/dev/null | wc -l | tr -d ' ') files)"; else echo "clean"; fi`
+- **Existing PR for current branch:** !`gh pr list --head "$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" --state all --json number,state,mergedAt,url --limit 1 --jq 'if length > 0 then .[0] else "(none)" end' 2>/dev/null || echo "(gh unavailable)"`
+
 ---
 
 ## Step 1: Pre-flight and Decide
 
-Check the environment. Stop with an actionable error on any failure.
+Read the **Pre-rendered context** above to make the routing decision without re-running the same commands. Stop with an actionable error on any failure (`In a git repo? = no`, `GitHub remote? = no`, `gh authed? = no`).
 
-```bash
-git rev-parse --is-inside-work-tree 2>/dev/null || echo "not_a_repo"
-git remote get-url origin 2>/dev/null | grep -qE 'github\.com[:/]' || echo "no_github_remote"
-gh auth status 2>&1 | grep -q "Logged in" || echo "gh_not_authenticated"
-```
+If the existing-PR row shows a `MERGED` state → go to **Step 3 (Cleanup)**.
+Otherwise → go to **Step 2 (Create)**. If a non-merged PR already exists, note that in the plan and offer to update it rather than create a new one.
 
-Resolve the default branch:
-
-```bash
-default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
-[ -z "$default_branch" ] && git rev-parse --verify main >/dev/null 2>&1 && default_branch=main
-[ -z "$default_branch" ] && git rev-parse --verify master >/dev/null 2>&1 && default_branch=master
-current_branch=$(git rev-parse --abbrev-ref HEAD)
-```
-
-Check whether a PR already exists for the current branch:
-
-```bash
-gh pr list --head "$current_branch" --state all --json number,state,mergedAt,url --limit 1 2>/dev/null
-```
+If you need fresher data than the pre-rendered values provide (e.g., the user just made changes after the skill loaded), re-run the relevant `git`/`gh` command via Bash.
 
 - If the PR state is `MERGED` → go to **Step 3 (Cleanup)**.
 - Otherwise → go to **Step 2 (Create)**. If a non-merged PR already exists, note that in the plan and offer to update it rather than create a new one.
