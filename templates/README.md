@@ -60,7 +60,7 @@ above already collapses it by default on GitHub.
 |---------|-------|
 | Model | `default` |
 | Effort | `default` |
-| Takes argument | No |
+| Argument hint | No |
 | Allowed tools | `Read, Grep, Glob, Bash, EnterPlanMode, ExitPlanMode` |
 
 The `Allowed tools` row must list the SAME tools as the SKILL.md `allowed-tools` frontmatter.

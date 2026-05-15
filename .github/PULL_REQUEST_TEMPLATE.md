@@ -9,7 +9,7 @@
 - [ ] `description` ends with a period and is verb-first
 - [ ] `description` in SKILL.md frontmatter matches README line 3 AND the root README table cell verbatim
 - [ ] `README.md` has all required sections (What It Does, Requirements, Usage, Configuration, Safety if applicable)
-- [ ] Configuration table has rows for `Model`, `Effort`, `Takes argument`, `Allowed tools`
+- [ ] Configuration table has rows for `Model`, `Effort`, `Argument hint`, `Allowed tools`
 - [ ] `Allowed tools` row matches the SKILL.md `allowed-tools` frontmatter exactly
 - [ ] Usage examples invoke `/<skill-name>` (not a stale name or another command)
 - [ ] If the skill uses `Agent` + Explore subagents: canonical IMPORTANT subagent block is present in the body

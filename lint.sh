@@ -74,6 +74,7 @@ scan_skill_md() {
     local file="$1" line in_fm=0 past_fm=0 lineno=0
     FM_OPENED=0
     FM_NAME="" FM_DESC="" FM_TOOLS=""
+    FM_ARG_HINT="" FM_HAS_TAKES_ARG=0
     BODY_HAS_ENTER=0 BODY_HAS_EXIT=0 BODY_HAS_EXPLORE=0 BODY_HAS_IMPORTANT=0
     while IFS= read -r line || [[ -n "$line" ]]; do
         lineno=$((lineno + 1))
@@ -93,6 +94,8 @@ scan_skill_md() {
             if   [[ "$line" =~ ^name:[[:space:]]*(.*)$          ]]; then FM_NAME="${BASH_REMATCH[1]}"
             elif [[ "$line" =~ ^description:[[:space:]]*(.*)$   ]]; then FM_DESC="${BASH_REMATCH[1]}"
             elif [[ "$line" =~ ^allowed-tools:[[:space:]]*(.*)$ ]]; then FM_TOOLS="${BASH_REMATCH[1]}"
+            elif [[ "$line" =~ ^argument-hint:[[:space:]]*(.*)$ ]]; then FM_ARG_HINT="${BASH_REMATCH[1]}"
+            elif [[ "$line" =~ ^takes-arg:[[:space:]]*(true|false)[[:space:]]*$ ]]; then FM_HAS_TAKES_ARG=1
             fi
         else
             [[ "$line" == *"EnterPlanMode"* ]] && BODY_HAS_ENTER=1
@@ -125,7 +128,7 @@ scan_skill_md() {
 scan_readme_md() {
     local file="$1" line lineno=0 i
     HAS_USAGE=0 HAS_SAFETY=0 HAS_EXAMPLE=0
-    HAS_TAKES_ARG_ROW=0 HAS_ALLOWED_TOOLS_ROW=0
+    HAS_ARG_HINT_ROW=0 HAS_ALLOWED_TOOLS_ROW=0 HAS_LEGACY_TAKES_ARG_ROW=0
     README_DESC="" README_TOOLS_CELL=""
     README_REQUIRED_FOUND=()
     for i in "${!REQUIRED_README_SECTIONS[@]}"; do README_REQUIRED_FOUND[i]=0; done
@@ -144,8 +147,14 @@ scan_readme_md() {
             '## Safety'*)   HAS_SAFETY=1 ;;
             '## Example'*)  HAS_EXAMPLE=1 ;;
         esac
+        if [[ "$line" =~ ^\|[[:space:]]*Argument[[:space:]]+hint[[:space:]]*\| ]]; then
+            HAS_ARG_HINT_ROW=1
+        fi
+        # Detect legacy "Takes argument" row from the pre-argument-hint era so
+        # `lint.sh` can prompt the user to migrate the README alongside the
+        # SKILL.md frontmatter migration.
         if [[ "$line" =~ ^\|[[:space:]]*Takes[[:space:]]+argument[[:space:]]*\| ]]; then
-            HAS_TAKES_ARG_ROW=1
+            HAS_LEGACY_TAKES_ARG_ROW=1
         fi
         # Match a Configuration table row of the form:
         #   | Allowed tools | Bash, Read, Edit |
@@ -228,6 +237,16 @@ lint_skill() {
         fail "Missing required field: allowed-tools"
     else
         pass "Has 'allowed-tools' field"
+    fi
+
+    # Argument-hint hygiene: the legacy `takes-arg: true` field is repo-internal
+    # and never recognized by Claude Code. Warn (non-blocking) so existing forks
+    # keep linting clean while the migration progresses.
+    if (( FM_HAS_TAKES_ARG )); then
+        warn "frontmatter declares legacy 'takes-arg' (repo-internal, ignored by Claude Code) — replace with 'argument-hint: <hint>'"
+    fi
+    if [[ -n "$FM_ARG_HINT" ]]; then
+        pass "Has 'argument-hint' field: $FM_ARG_HINT"
     fi
 
     # Plan-mode discipline: when EnterPlanMode is declared, ExitPlanMode must
@@ -337,11 +356,15 @@ lint_skill() {
         fi
     fi
 
-    # Configuration table should include Takes argument and Allowed tools rows
-    if (( HAS_TAKES_ARG_ROW )); then
-        pass "Configuration table has 'Takes argument' row"
+    # Configuration table should include Argument hint and Allowed tools rows.
+    # The legacy "Takes argument" row name predates the migration to the
+    # official `argument-hint` field; warn separately so users know to rename.
+    if (( HAS_ARG_HINT_ROW )); then
+        pass "Configuration table has 'Argument hint' row"
+    elif (( HAS_LEGACY_TAKES_ARG_ROW )); then
+        warn "Configuration table uses legacy 'Takes argument' row — rename to 'Argument hint'"
     else
-        warn "Configuration table missing 'Takes argument' row"
+        warn "Configuration table missing 'Argument hint' row"
     fi
     if (( HAS_ALLOWED_TOOLS_ROW )); then
         pass "Configuration table has 'Allowed tools' row"
