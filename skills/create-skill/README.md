@@ -73,7 +73,7 @@ Scaffolding a new "C# security audit" skill from scratch:
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Takes argument | Yes (optional: description of the skill to create) |
+| Argument hint | `[skill description]` (optional: description of the skill to create) |
 | Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode |
 
 ## Safety

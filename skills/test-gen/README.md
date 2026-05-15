@@ -82,7 +82,7 @@ Covers: catch branch at line 28
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Takes argument | Yes |
+| Argument hint | `[path \| identifier]` |
 | Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode |
 
 ## Safety

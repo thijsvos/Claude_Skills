@@ -5,7 +5,7 @@ when_to_use: Use when the user asks to generate, write, or create tests for a sp
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[path | identifier]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.

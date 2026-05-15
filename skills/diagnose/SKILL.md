@@ -2,10 +2,10 @@
 name: diagnose
 description: Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses.
 when_to_use: Use when the user pastes an error message or stack trace, reports unexpected behavior, asks "why is X failing", or wants help finding the root cause of a CI/test failure.
-allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[error | path | identifier]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
@@ -92,7 +92,7 @@ Provide each agent with:
 - The language/framework context
 - Any project context gathered
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"`. The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during investigation.
+**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.7, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during investigation. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 
 Each agent must return findings in this structured format:
 - **Hypothesis**: a clear statement of what might be wrong
@@ -286,5 +286,11 @@ If the user requests a fix:
 3. If tests exist for the affected code, suggest running them:
    > Run `<test command>` to verify the fix resolves the issue.
 4. If the user reports the fix for H1 didn't work, suggest trying H2
+
+**Skill handoff.** After a fix is applied successfully, offer to write a regression test so the bug can't return:
+
+> **Next:** Want me to hand off to `/test-gen` for `<file>` to write a regression test that pins the bug shut? Useful when the affected code wasn't covered before.
+
+Use the `Skill` tool to invoke `/test-gen` if the user agrees. Skip the offer when the fix is purely configuration/environmental (no code path to regression-test) or when the user already runs `/test-gen` regularly.
 
 If no hypothesis has a code fix (e.g., environmental issue), provide the exact steps the user should take to resolve it.
