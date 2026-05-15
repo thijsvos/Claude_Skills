@@ -89,8 +89,8 @@ Update command:
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Takes argument | Yes (optional: file path, directory, or ecosystem name) |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode |
+| Argument hint | `[manifest \| directory \| ecosystem]` (optional: file path, directory, or ecosystem name) |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 

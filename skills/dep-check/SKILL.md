@@ -1,10 +1,11 @@
 ---
 name: dep-check
 description: Scans all dependency declarations across ecosystems, checks for updates and vulnerabilities, and produces a prioritized update plan with testing recommendations.
-allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
+when_to_use: Use when the user asks about outdated dependencies, package CVEs, pinned-version freshness, dependabot/renovate gaps, or wants an upgrade plan across ecosystems (npm, pip, cargo, go, gem, composer, docker, GitHub Actions).
+allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[manifest | directory | ecosystem]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
@@ -96,7 +97,7 @@ Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: 
 
 Provide each agent with the complete list of discovered manifest files, their full contents, the dependency names, current versions, version constraints, and the detected ecosystems from Step 1.
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"`. The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis.
+**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.7, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 
 ---
 
@@ -284,6 +285,13 @@ For dependencies with major version updates available (identified by Agent 1), a
 - Categorize the effort: **drop-in** (likely no code changes needed), **minor migration** (configuration or import changes), **significant migration** (API changes requiring code rewrites)
 - Note any dependencies that have been deprecated or archived
 
+**Effort gate** for the WebSearch step (`${CLAUDE_EFFORT}`):
+- `max` / `xhigh` / `high` — perform breaking-change WebSearch lookups for every major bump (default).
+- `medium` — limit lookups to dependencies with ≥3 major versions of drift (e.g. v2 → v5).
+- `low` / `min` — skip WebSearch lookups entirely; report each major bump as "breaking change risk: not assessed (effort=${CLAUDE_EFFORT})" and recommend the user re-run at higher effort or consult the changelog manually.
+
+This avoids serializing 10+ WebSearch calls during a quick `/dep-check` while preserving the deep-dive when the user asked for one.
+
 Return findings as two structured lists:
 1. **Vulnerabilities** — sorted by severity (critical first)
 2. **Breaking change assessments** — for each major update, with migration effort estimate
@@ -447,6 +455,12 @@ If the user requests updates, apply them by **editing the manifest files in plac
    > **Applied Group 1**: Updated 3 packages in `package.json`. Run `<install command>` then `<test command>` to verify.
 5. Do **not** run install commands (`npm install`, `pip install`, `cargo update`, `bundle install`, etc.) or test commands automatically. Once you've finished editing manifests, tell the user what to run. Always quote `<package>` and `<version>` arguments in the commands you suggest, since version constraints can contain shell metacharacters like `<`, `>`, and spaces:
    > I've updated the version declarations. Run `npm install` (or `cargo update -p "<package>"`, `bundle update "<gem>"`, `composer update "<package>"`, etc. — quote the package/version) to refresh lockfiles and install the new versions, then `<test command>` to verify.
+
+**Skill handoff.** Major version bumps can change behavior even when the API still type-checks. After applying any update group that contains a major bump, offer to hand off to `/test-gen` so the affected modules get fresh coverage before the user runs the test suite:
+
+> **Next:** Group <N> contains a major version bump (`<package> <old> → <new>`). Want me to hand off to `/test-gen` for the modules that consume `<package>` to add coverage around the breaking-change surface?
+
+Use the `Skill` tool to invoke `/test-gen` if the user agrees. Skip the handoff when only patch/minor updates were applied (low risk of behavior change) or when the project already has dense coverage of the affected modules.
 
 If the report shows zero updates and zero vulnerabilities, skip the update offer:
 > All dependencies are up to date and no known vulnerabilities were found.

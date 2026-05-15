@@ -1,10 +1,11 @@
 ---
 name: code-review
 description: Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers.
-allowed-tools: Read, Grep, Glob, Bash, Agent, EnterPlanMode, ExitPlanMode
+when_to_use: Use when the user asks for a review of pending changes, wants a verdict on a diff, asks "is this ready to merge", or names a file/branch/commit-range to review.
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[path | identifier | ref | range]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
@@ -98,6 +99,12 @@ Provide each agent with:
 **IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.7, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 
 **IMPORTANT:** Instruct each agent to read the **full files** being changed (not just the diff hunks) so they understand the surrounding context, module purpose, and how the changes integrate with existing code.
+
+**Effort gate.** Adapt the file-reading depth to the active effort level via `${CLAUDE_EFFORT}`:
+- `max` / `xhigh` / `high` — read full files for every changed module (default; current behavior).
+- `medium` / `low` / `min` — read the changed hunks plus the immediate surrounding ~50 lines of context, not the full files. The review report header should note this as `read scope: hunks+context (effort=${CLAUDE_EFFORT})` so the user knows the depth was reduced.
+
+This avoids the "max-effort review for a one-line typo fix" wall-clock penalty without compromising deep reviews when the user asked for them.
 
 Each agent must return findings in this structured format:
 - **Severity**: Critical / Warning / Suggestion
@@ -251,5 +258,11 @@ If the user requests fixes:
 1. Address findings in severity order (Critical first, then Warnings)
 2. Show each change clearly
 3. After all fixes are applied, briefly note what was changed
+
+**Skill handoff.** If the review surfaced structural issues that go beyond the diff (e.g., a Critical finding that points at a long-standing architectural smell, or repeated patterns across the touched files), offer to hand off to `/refactor` via the `Skill` tool:
+
+> **Next:** Want me to run `/refactor` on the touched files for a deeper structural pass? It uses three orthogonal lenses (correctness/security, performance, structure) and produces an incremental plan.
+
+Only suggest the handoff when there's genuine signal that more work is warranted — don't surface it after a clean SHIP IT ✓ verdict or when only stylistic Suggestions remain.
 
 If the report verdict is **SHIP IT ✓** with no actionable findings, skip the fix offer and confirm the code looks good.

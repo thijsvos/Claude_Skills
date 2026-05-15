@@ -1,10 +1,11 @@
 ---
 name: refactor
 description: Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes.
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
+when_to_use: Use when the user wants to refactor a specific file/module/function — distinct from /code-review (which works on a diff) and /idiom-check (which audits the whole codebase through one language lens).
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[path | identifier | branch | range]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
@@ -133,7 +134,7 @@ Each agent must return findings in this structured format:
 - **Confidence**: High / Medium / Low (how certain the agent is that this is an actual issue)
 - **Risk**: Safe (behavior-preserving, no regression possible) / Moderate (behavior-preserving but context-dependent) / Breaking (intentionally changes behavior for correctness or security)
 
-Each agent must also return 2-3 **"Strengths"** callouts — things the code already does well in their analysis dimension that should NOT be changed. This prevents unnecessary refactoring and acknowledges good practices.
+Each agent must also return 2-3 **"Looks Good"** callouts — things the code already does well in their analysis dimension that should NOT be changed. This prevents unnecessary refactoring and acknowledges good practices.
 
 ---
 
@@ -307,7 +308,7 @@ Collect all findings from the 3 agents and produce a single, structured refactor
 
 - [R5] depends on [R2] (extraction must happen before the security fix)
 
-### Strengths (do not change)
+### Looks Good (do not change)
 
 - <Positive observation from Correctness & Security agent>
 - <Positive observation from Performance & Efficiency agent>
@@ -366,6 +367,12 @@ If the repository has uncommitted changes outside the refactoring scope, warn th
    >
    > Run `git diff` to review the changes before committing.
 
+   **Skill handoff.** After a successful refactor, offer to refresh tests for the touched modules — particularly when the refactoring renamed or restructured public surfaces:
+
+   > **Next:** Want me to hand off to `/test-gen` for the modified files to refresh test coverage and pick up any new branches the refactor introduced?
+
+   Use the `Skill` tool to invoke `/test-gen` if the user agrees. Skip the offer when the refactor was purely internal (e.g., a constant rename inside one function) and existing tests already exercise the surface.
+
 7. **If tests fail**, report which tests failed and diagnose the likely cause:
    > **<P> tests passed, <F> failed.** The failure appears related to [R4] (<brief diagnosis>).
    >
@@ -376,5 +383,9 @@ If the repository has uncommitted changes outside the refactoring scope, warn th
 
 8. **If no test runner is available:**
    > **All changes applied.** No test runner detected — review changes manually with `git diff` before committing.
-   >
-   > Consider running `/test-gen` to create tests for the refactored code.
+
+   **Skill handoff.** Offer to bootstrap a test infrastructure via `/test-gen` (which detects no-framework repos and proposes setup):
+
+   > **Next:** No test framework detected. Want me to hand off to `/test-gen` to scaffold one and write tests for the refactored modules?
+
+   Use the `Skill` tool to invoke `/test-gen` if the user agrees.

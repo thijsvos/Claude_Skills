@@ -75,8 +75,8 @@ The refresh-token branch returns the *old* token to the client even after rotati
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Takes argument | Yes |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, EnterPlanMode, ExitPlanMode |
+| Argument hint | `[path \| identifier \| ref \| range]` |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 

@@ -1,7 +1,8 @@
 ---
 name: idiom-check
 description: Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles.
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
+when_to_use: Use when the user asks for a language-specific idiom audit (e.g., "are we writing idiomatic Rust", "is this Pythonic", "Go-style review") of the whole codebase. Distinct from /code-review (which works on a diff) and /refactor (single target).
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 ---
@@ -167,7 +168,7 @@ In your prompt to each agent, explicitly include:
 
 ## Step 3: Synthesize Severity-Sorted Report
 
-Collect all findings from the 3 agents and produce a single, prioritized report.
+Collect all findings from the 3 agents and produce a single, prioritized report. **ultrathink** during deduplication and prioritization — multiple agents may flag the same code for related-but-different reasons, and the synthesis quality depends on resolving those overlaps thoughtfully.
 
 **Synthesis rules:**
 
@@ -301,7 +302,18 @@ gh auth status 2>&1 | grep -q "Logged in" || echo "gh_not_authenticated"
 git status --porcelain
 ```
 
-If the working tree is dirty, stop and ask the user whether to stash (`git stash push -m "idiom-check: pre-bundle stash"`) or abort. If `gh` is not authenticated or the remote is not GitHub, stop with an actionable error.
+If the working tree is dirty, stop and ask the user whether to stash or abort. When stashing, use the explicit-SHA `git stash create` + `git stash store` pattern (consistent with `/refactor` and `/docstring-check`) so the snapshot can be restored reliably later — `git stash push` exits 0 even when there's nothing to stash, which makes a "revert all" hard to reason about:
+
+```bash
+backup_sha=$(git stash create "idiom-check-backup: pre-bundle stash" 2>/dev/null)
+if [ -n "$backup_sha" ]; then
+  git stash store -m "idiom-check-backup: pre-bundle stash" "$backup_sha"
+fi
+```
+
+Record `$backup_sha` so the user can `git stash apply "$backup_sha"` later if they want the pre-bundle state back. If `$backup_sha` is empty, the working tree was clean — proceed without a backup.
+
+If `gh` is not authenticated or the remote is not GitHub, stop with an actionable error.
 
 **Resolve the default branch:**
 
@@ -372,3 +384,9 @@ default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@
 > - **[B3]** <B3 title> → <pr_url>
 >
 > Note: when merging these PRs, avoid `gh pr merge --delete-branch` if you stack any of them on top of each other — it closes dependent PRs.
+
+**Skill handoff.** After the PRs are open, offer to do an independent second pass via `/code-review` on each bundle's diff:
+
+> **Next:** Want me to hand off to `/code-review` for one or more of these PRs? Useful as a second pair of eyes before you merge — `/code-review` covers correctness, security, and conventions through a different lens than the idiom audit did.
+
+Use the `Skill` tool to invoke `/code-review` (with the PR's branch as the argument) if the user agrees. Skip the offer when the bundles were trivially small (single-file Low-severity polish) or when the user wants to merge immediately.

@@ -1,6 +1,7 @@
 ---
 name: github-ship
 description: Turns local changes into a GitHub issue and linked PR, or cleans up the branch if the PR was already merged. Auto-detects which.
+when_to_use: Use when the user wants to ship pending changes as a GitHub issue + PR pair, or wants to clean up a feature branch after the PR has been merged on GitHub. Auto-detects create vs cleanup mode.
 allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max

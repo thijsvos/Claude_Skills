@@ -1,10 +1,11 @@
 ---
 name: test-gen
 description: Analyzes code to generate comprehensive tests covering happy paths, edge cases, error handling, and integration points, matching the project's existing test conventions.
+when_to_use: Use when the user asks to generate, write, or create tests for a specific file, function, class, or directory. Also after a refactor or bug fix when the user wants regression coverage.
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[path | identifier]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.

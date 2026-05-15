@@ -73,7 +73,7 @@ Auditing a Rust library that just went public:
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Takes argument | No |
+| Argument hint | No |
 | Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode |
 
 ## Safety

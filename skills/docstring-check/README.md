@@ -91,7 +91,7 @@ Linter available — will re-run `ruff check --select D src/users.py` after fixe
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Takes argument | Yes (optional: file path, directory, symbol name, branch, commit range, or description) |
+| Argument hint | `[path \| symbol \| branch \| range]` (optional: file path, directory, symbol name, branch, commit range, or description) |
 | Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode |
 
 ## Safety
