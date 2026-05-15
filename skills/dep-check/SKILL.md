@@ -4,7 +4,7 @@ description: Scans all dependency declarations across ecosystems, checks for upd
 allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[manifest | directory | ecosystem]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.

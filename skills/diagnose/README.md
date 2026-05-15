@@ -79,7 +79,7 @@ to `return data?.users`, but the dashboard still calls `.map(...)` without guard
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Takes argument | Yes (optional: error message, stack trace, file path, or description) |
+| Argument hint | `[error \| path \| identifier]` (optional: error message, stack trace, file path, or description) |
 | Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, EnterPlanMode, ExitPlanMode |
 
 ## Safety

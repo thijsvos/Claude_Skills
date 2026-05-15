@@ -4,7 +4,7 @@ description: Scans a codebase for missing, outdated, drifted, or inconsistent do
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[path | symbol | branch | range]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.

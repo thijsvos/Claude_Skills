@@ -82,7 +82,7 @@ the substrate for a future `--metrics` exporter or a `replay` subcommand.
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Takes argument | No |
+| Argument hint | No |
 | Disable model invocation | `true` |
 | Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, EnterPlanMode, ExitPlanMode, AskUserQuestion |
 

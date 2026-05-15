@@ -83,7 +83,7 @@ The `===` comparison is variable-time; switch to `crypto.timingSafeEqual` to clo
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Takes argument | Yes (optional: file path, directory, function name, branch, commit range, or description) |
+| Argument hint | `[path \| identifier \| branch \| range]` (optional: file path, directory, function name, branch, commit range, or description) |
 | Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode |
 
 ## Safety

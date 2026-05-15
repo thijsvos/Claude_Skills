@@ -4,7 +4,7 @@ description: Structured code review across correctness, security, performance, a
 allowed-tools: Read, Grep, Glob, Bash, Agent, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
-takes-arg: true
+argument-hint: "[path | identifier | ref | range]"
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
