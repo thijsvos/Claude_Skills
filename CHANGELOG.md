@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-05-15
+
+### Fixed
+
+- **`lint.sh` no longer breaks on CRLF-saved SKILL.md/README.md files.** Previously, a Windows-saved skill failed every check (the `---` and `## Section` matches don't equal `---\r` / `## Section\r`) with the unhelpful diagnostic "missing frontmatter". The two new single-pass scanners (`scan_skill_md`, `scan_readme_md`) strip a trailing `\r` per line and a leading UTF-8 BOM on line 1 before any comparison. Lines without a trailing newline are now handled via the `|| [[ -n "$line" ]]` idiom so the last line of a truncated file still parses.
+- **`lint.sh` no longer prints "README Usage examples reference /name correctly" alongside a "README missing section: Usage" failure.** The slash-command parity check is now gated on `HAS_USAGE`, eliminating a contradictory pass/fail pair on the same skill.
+- **`install.sh` collects failures across all skill arguments instead of aborting on the first one.** Under `set -e`, `install_skill "$skill"` returning 1 in a `for` loop terminated the script — so `bash install.sh nonexistent_skill another_skill` would error on the first and silently skip the second. Now uses `install_skill ... || exit_code=1` per iteration and ends with `exit "$exit_code"`. Mirrors `lint.sh`'s "report and continue, exit non-zero at the end" semantics.
+- **`install.sh` rollback-failure message now prints the exact `mv` recovery command** (`Restore manually with: mv <backup> <target>`, both paths `%q`-quoted). Previously the user was told "backup left in place" with no actionable next step.
+
+### Changed
+
+- **`lint.sh` consolidates ~17 file scans per skill into 2 single-pass scanners.** Replaces three `get_frontmatter` calls plus ~10 separate `grep` invocations per skill (and the brace-grouped 3-line read for README line 3, and the separate `while read` loop for the Allowed-tools cell) with `scan_skill_md` and `scan_readme_md`. Each function reads its file once, sets named flag globals (`FM_*`, `BODY_HAS_*`, `HAS_*`, `README_REQUIRED_FOUND[]`), and returns. Across 13 skills this is ~120 fewer subprocesses per CI lint run.
+- **`REQUIRED_README_SECTIONS` is now a top-of-file constant** near `SKILLS_DIR`. Both the scanner (iterates it to populate `README_REQUIRED_FOUND[]`) and the lint loop (iterates the parallel arrays to emit pass/fail) consume the same constant — adding a new required section means editing one array. The canonical list now sits where readers expect "what does this script know about the project" data.
+- **README required-section heading matching tightened to Title Case.** The pre-refactor code used `grep -qi`, tolerating arbitrary casing. The new scanner matches `## What It Does` literally (and the other three). All 13 existing skills use Title Case, and `CLAUDE.md`'s `## README Convention` only specifies Title Case, so this aligns the implementation with the documented contract.
+- **Plan-mode pairing logic in `lint.sh` consolidated.** The two adjacent `if [[ "$tools" == *"EnterPlanMode"* ]]; then ... fi` guards (one for frontmatter pairing, one for body references) are now a single outer guard. The stale "if either is in tools" comment that suggested the guard checked both `EnterPlanMode` and `ExitPlanMode` (it only ever checked the former) is gone.
+
+### Added
+
+- **Design-rationale comments** on the dense bits of `lint.sh`: an example row above the allowed-tools regex (`Match a Configuration table row of the form: | Allowed tools | Bash, Read, Edit |`), an explicit "Asymmetry vs install.sh" header on the `pass`/`fail`/`warn` helper block explaining why `lint.sh` uses per-outcome helpers while `install.sh` uses a generic `emit`, and a "Pin return status" comment on each new scanner explaining why an explicit `return 0` is required (the body's trailing `&&` chains can yield non-zero on the last iteration and trip `set -e` in the caller).
+
 ## [0.2.1] - 2026-05-14
 
 ### Added
