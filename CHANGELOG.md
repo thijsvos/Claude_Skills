@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-05-15
+
 ### Fixed
 
 - **`code-review` can now actually apply fixes its Step 4 promises.** Step 4 ("Address findings... Show each change clearly") existed in the body but `Edit` was missing from `allowed-tools`, so the skill could only review and never edit. Added `Edit` to both the SKILL.md frontmatter and the README's `Allowed tools` row.
