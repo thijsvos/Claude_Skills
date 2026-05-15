@@ -12,6 +12,13 @@ fi
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILLS_DIR="$REPO_DIR/skills"
 
+# Required README section headings, per CLAUDE.md "README Convention".
+# scan_readme_md() iterates this array to populate README_REQUIRED_FOUND[];
+# lint_skill() iterates it again to emit pass/fail messages. Adding a new
+# required section means editing only this constant (the scanner and lint
+# loop both adapt automatically).
+REQUIRED_README_SECTIONS=("What It Does" "Requirements" "Usage" "Configuration")
+
 # Colors (disabled if not a terminal or terminal has no color support).
 # Use `tput` so the right escape sequence is picked for the actual terminfo
 # entry instead of hardcoding xterm-only bytes.
@@ -37,6 +44,10 @@ TOTAL_WARN=0
 #         what causes the script to `exit 1` at the bottom.
 #   warn: bumps TOTAL_WARN (yellow [warn] tag); non-blocking.
 #
+# Asymmetry vs install.sh: lint.sh has exactly three outcomes that each bump
+# a TOTAL_* counter, so per-outcome helpers are clearer than a generic emit.
+# install.sh has many distinct tags and no totals — it uses a generic emit().
+#
 # Implementation note: `printf` instead of `echo -e` so behavior is
 # identical across the bash builtin, dash, and BSD echo. The color
 # variables already hold literal escape bytes from `tput` above (no
@@ -45,30 +56,108 @@ pass() { printf '  %s[pass]%s %s\n' "$GREEN"  "$NC" "$1"; TOTAL_PASS=$((TOTAL_PA
 fail() { printf '  %s[fail]%s %s\n' "$RED"    "$NC" "$1"; TOTAL_FAIL=$((TOTAL_FAIL + 1)); }
 warn() { printf '  %s[warn]%s %s\n' "$YELLOW" "$NC" "$1"; TOTAL_WARN=$((TOTAL_WARN + 1)); }
 
-# Extract a frontmatter field value from a SKILL.md file.
+# Scan SKILL.md in a single pass. Sets globals:
+#   FM_OPENED, FM_CLOSED                          — frontmatter delimiter presence
+#   FM_NAME, FM_DESC, FM_TOOLS                    — required frontmatter values
+#   BODY_HAS_ENTER, BODY_HAS_EXIT                 — EnterPlanMode/ExitPlanMode references
+#   BODY_HAS_EXPLORE, BODY_HAS_IMPORTANT          — Explore subagent + canonical IMPORTANT block
 #
-# Args: $1 = SKILL.md path, $2 = frontmatter key. Returns 0 with no output
-# when the key is absent (callers test with `[[ -z "$x" ]]`). Does NOT trim
-# trailing whitespace; callers normalize via parameter expansion as needed
-# (see the `${tools_val//[[:space:]]/}` comparison further down).
+# Replaces three get_frontmatter() calls plus four `grep` invocations with a
+# single read pass. Strips trailing CR so Windows-saved (CRLF) SKILL.md files
+# lint the same as LF-saved ones, strips a UTF-8 BOM from line 1, and uses
+# the `|| [[ -n "$line" ]]` idiom so the last line of a file lacking a
+# trailing newline is still processed.
 #
-# Pure-bash implementation so genuine file/read errors aren't swallowed by
-# `|| true` the way they were in the old `sed | grep | head | sed || true`
-# pipeline.
-get_frontmatter() {
-    local file="$1" field="$2" line in_fm=0
-    while IFS= read -r line; do
-        if [[ "$line" == "---" ]]; then
-            in_fm=$((in_fm + 1))
-            [[ $in_fm -eq 2 ]] && return 0
-            continue
-        fi
-        [[ $in_fm -eq 1 ]] || continue
-        if [[ "$line" =~ ^${field}:[[:space:]]*(.*)$ ]]; then
-            printf '%s\n' "${BASH_REMATCH[1]}"
-            return 0
+# Pure-bash implementation: no subprocesses, no command substitution, no
+# pipelines whose errors would be swallowed by `|| true`.
+scan_skill_md() {
+    local file="$1" line in_fm=0 past_fm=0 lineno=0
+    FM_OPENED=0
+    FM_NAME="" FM_DESC="" FM_TOOLS=""
+    BODY_HAS_ENTER=0 BODY_HAS_EXIT=0 BODY_HAS_EXPLORE=0 BODY_HAS_IMPORTANT=0
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        lineno=$((lineno + 1))
+        [[ $lineno -eq 1 ]] && line="${line#$'\xEF\xBB\xBF'}"
+        line="${line%$'\r'}"
+        if (( past_fm == 0 )); then
+            if [[ "$line" == "---" ]]; then
+                in_fm=$((in_fm + 1))
+                if (( in_fm == 1 )); then
+                    FM_OPENED=1
+                elif (( in_fm == 2 )); then
+                    past_fm=1
+                fi
+                continue
+            fi
+            (( in_fm == 1 )) || continue
+            if   [[ "$line" =~ ^name:[[:space:]]*(.*)$          ]]; then FM_NAME="${BASH_REMATCH[1]}"
+            elif [[ "$line" =~ ^description:[[:space:]]*(.*)$   ]]; then FM_DESC="${BASH_REMATCH[1]}"
+            elif [[ "$line" =~ ^allowed-tools:[[:space:]]*(.*)$ ]]; then FM_TOOLS="${BASH_REMATCH[1]}"
+            fi
+        else
+            [[ "$line" == *"EnterPlanMode"* ]] && BODY_HAS_ENTER=1
+            [[ "$line" == *"ExitPlanMode"*  ]] && BODY_HAS_EXIT=1
+            [[ "$line" =~ subagent_type:[[:space:]]*\"?Explore\"? ]] && BODY_HAS_EXPLORE=1
+            [[ "$line" == *"subagents MUST be launched with"* ]] && BODY_HAS_IMPORTANT=1
         fi
     done < "$file"
+    # Pin return status: the body's trailing `&&` chains can yield non-zero
+    # exit on the last iteration, which would trip `set -e` in the caller.
+    return 0
+}
+
+# Scan README.md in a single pass. Sets globals:
+#   README_REQUIRED_FOUND[]                       — parallel to REQUIRED_README_SECTIONS
+#   HAS_USAGE                                     — convenience flag for the Usage-gated check below
+#   HAS_SAFETY, HAS_EXAMPLE                       — optional / recommended sections
+#   HAS_TAKES_ARG_ROW, HAS_ALLOWED_TOOLS_ROW      — Configuration table rows
+#   README_DESC                                   — line 3 (one-line description per template)
+#   README_TOOLS_CELL                             — right-trimmed Allowed tools cell, backticks stripped
+#
+# Same CRLF/BOM/trailing-newline hardening as scan_skill_md. Required-section
+# detection iterates REQUIRED_README_SECTIONS so adding a new required
+# section means editing only that constant.
+#
+# Heading match is case-sensitive (Title Case per project convention). The
+# pre-refactor code used `grep -qi` which tolerated arbitrary casing; all 13
+# existing skills use Title Case so tightening this is a no-op in practice
+# and aligns with what CLAUDE.md actually specifies.
+scan_readme_md() {
+    local file="$1" line lineno=0 i
+    HAS_USAGE=0 HAS_SAFETY=0 HAS_EXAMPLE=0
+    HAS_TAKES_ARG_ROW=0 HAS_ALLOWED_TOOLS_ROW=0
+    README_DESC="" README_TOOLS_CELL=""
+    README_REQUIRED_FOUND=()
+    for i in "${!REQUIRED_README_SECTIONS[@]}"; do README_REQUIRED_FOUND[i]=0; done
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        lineno=$((lineno + 1))
+        [[ $lineno -eq 1 ]] && line="${line#$'\xEF\xBB\xBF'}"
+        line="${line%$'\r'}"
+        [[ $lineno -eq 3 ]] && README_DESC="$line"
+        for i in "${!REQUIRED_README_SECTIONS[@]}"; do
+            if [[ "$line" == "## ${REQUIRED_README_SECTIONS[i]}"* ]]; then
+                README_REQUIRED_FOUND[i]=1
+            fi
+        done
+        case "$line" in
+            '## Usage'*)    HAS_USAGE=1 ;;
+            '## Safety'*)   HAS_SAFETY=1 ;;
+            '## Example'*)  HAS_EXAMPLE=1 ;;
+        esac
+        if [[ "$line" =~ ^\|[[:space:]]*Takes[[:space:]]+argument[[:space:]]*\| ]]; then
+            HAS_TAKES_ARG_ROW=1
+        fi
+        # Match a Configuration table row of the form:
+        #   | Allowed tools | Bash, Read, Edit |
+        # Capture group 1 is the right-trimmed middle cell. Backticks in the cell
+        # (e.g. "| Allowed tools | `Read, Edit` |") are stripped via parameter expansion.
+        if [[ "$line" =~ ^\|[[:space:]]*Allowed[[:space:]]+tools[[:space:]]*\|[[:space:]]*(.*[^[:space:]])[[:space:]]*\|[[:space:]]*$ ]]; then
+            HAS_ALLOWED_TOOLS_ROW=1
+            README_TOOLS_CELL="${BASH_REMATCH[1]//\`/}"
+        fi
+    done < "$file"
+    # Pin return status (see scan_skill_md for the rationale).
+    return 0
 }
 
 # Run every lint check against a single skill directory.
@@ -88,6 +177,7 @@ lint_skill() {
     local skill_dir="$SKILLS_DIR/$skill_name"
     local skill_md="$skill_dir/SKILL.md"
     local readme_md="$skill_dir/README.md"
+    local i
 
     printf '\n%sChecking: %s%s\n' "$BOLD" "$skill_name" "$NC"
 
@@ -98,86 +188,75 @@ lint_skill() {
     fi
     pass "SKILL.md exists"
 
-    # Check frontmatter exists.
-    # Read the first line natively (no pipeline, no subshell). `|| true` lets the
-    # `read` short-circuit on an empty file without tripping `set -e`.
-    local first_line=""
-    IFS= read -r first_line < "$skill_md" || true
-    if [[ "$first_line" != "---" ]]; then
+    # Single-pass SKILL.md scan: populates FM_OPENED, FM_NAME, FM_DESC, FM_TOOLS,
+    # BODY_HAS_ENTER/EXIT/EXPLORE/IMPORTANT.
+    scan_skill_md "$skill_md"
+
+    # Check frontmatter exists (file opens with ---)
+    if (( ! FM_OPENED )); then
         fail "SKILL.md missing frontmatter (must start with ---)"
         return
     fi
     pass "SKILL.md has frontmatter"
 
     # Check required frontmatter fields
-    local name_val
-    name_val="$(get_frontmatter "$skill_md" "name")"
-    if [[ -z "$name_val" ]]; then
+    if [[ -z "$FM_NAME" ]]; then
         fail "Missing required field: name"
     else
-        pass "Has 'name' field: $name_val"
+        pass "Has 'name' field: $FM_NAME"
         # Cross-reference: name should match directory
-        if [[ "$name_val" != "$skill_name" ]]; then
-            fail "name '$name_val' does not match directory '$skill_name'"
+        if [[ "$FM_NAME" != "$skill_name" ]]; then
+            fail "name '$FM_NAME' does not match directory '$skill_name'"
         else
             pass "name matches directory"
         fi
     fi
 
-    local desc_val
-    desc_val="$(get_frontmatter "$skill_md" "description")"
-    if [[ -z "$desc_val" ]]; then
+    if [[ -z "$FM_DESC" ]]; then
         fail "Missing required field: description"
     else
         pass "Has 'description' field"
         # Description should end with a period
-        if [[ "$desc_val" == *"." ]]; then
+        if [[ "$FM_DESC" == *"." ]]; then
             pass "description ends with a period"
         else
             warn "description does not end with a period"
         fi
     fi
 
-    local tools_val
-    tools_val="$(get_frontmatter "$skill_md" "allowed-tools")"
-    if [[ -z "$tools_val" ]]; then
+    if [[ -z "$FM_TOOLS" ]]; then
         fail "Missing required field: allowed-tools"
     else
         pass "Has 'allowed-tools' field"
     fi
 
-    # Check plan-mode discipline: if EnterPlanMode is present, ExitPlanMode must be too
-    if [[ "$tools_val" == *"EnterPlanMode"* ]]; then
-        if [[ "$tools_val" == *"ExitPlanMode"* ]]; then
+    # Plan-mode discipline: when EnterPlanMode is declared, ExitPlanMode must
+    # be paired in frontmatter AND both must be referenced in the body.
+    if [[ "$FM_TOOLS" == *"EnterPlanMode"* ]]; then
+        if [[ "$FM_TOOLS" == *"ExitPlanMode"* ]]; then
             pass "EnterPlanMode and ExitPlanMode are paired in allowed-tools"
         else
             fail "EnterPlanMode declared without ExitPlanMode in allowed-tools"
         fi
-    fi
-
-    # Check that the body calls both EnterPlanMode and ExitPlanMode if either is in tools
-    if [[ "$tools_val" == *"EnterPlanMode"* ]]; then
-        if grep -q "EnterPlanMode" "$skill_md"; then
+        if (( BODY_HAS_ENTER )); then
             pass "body references EnterPlanMode"
         else
             fail "EnterPlanMode in allowed-tools but never referenced in body"
         fi
-        if grep -q "ExitPlanMode" "$skill_md"; then
+        if (( BODY_HAS_EXIT )); then
             pass "body references ExitPlanMode"
         else
             fail "ExitPlanMode in allowed-tools but never referenced in body"
         fi
     fi
 
-    # If multi-agent (Agent in tools and body launches subagents), require the IMPORTANT block
-    if [[ "$tools_val" == *"Agent"* ]]; then
-        if grep -qE 'subagent_type:[[:space:]]*"?Explore"?' "$skill_md"; then
-            # Body uses Explore subagents — must include the canonical IMPORTANT block
-            if grep -q 'subagents MUST be launched with' "$skill_md"; then
-                pass "IMPORTANT subagent block present"
-            else
-                warn "Agent + Explore subagents used but canonical IMPORTANT block missing"
-            fi
+    # If multi-agent (Agent in tools and body launches Explore subagents),
+    # require the canonical IMPORTANT block.
+    if [[ "$FM_TOOLS" == *"Agent"* ]] && (( BODY_HAS_EXPLORE )); then
+        if (( BODY_HAS_IMPORTANT )); then
+            pass "IMPORTANT subagent block present"
+        else
+            warn "Agent + Explore subagents used but canonical IMPORTANT block missing"
         fi
     fi
 
@@ -188,18 +267,22 @@ lint_skill() {
     fi
     pass "README.md exists"
 
-    # Check required README sections
-    local required_sections=("What It Does" "Requirements" "Usage" "Configuration")
-    for section in "${required_sections[@]}"; do
-        if grep -qi "## $section" "$readme_md"; then
-            pass "README has section: $section"
+    # Single-pass README.md scan: populates README_REQUIRED_FOUND[], HAS_USAGE,
+    # HAS_SAFETY, HAS_EXAMPLE, HAS_TAKES_ARG_ROW, HAS_ALLOWED_TOOLS_ROW,
+    # README_DESC, README_TOOLS_CELL.
+    scan_readme_md "$readme_md"
+
+    # Required README sections (iterates the top-of-file constant)
+    for i in "${!REQUIRED_README_SECTIONS[@]}"; do
+        if (( README_REQUIRED_FOUND[i] )); then
+            pass "README has section: ${REQUIRED_README_SECTIONS[i]}"
         else
-            fail "README missing section: $section"
+            fail "README missing section: ${REQUIRED_README_SECTIONS[i]}"
         fi
     done
 
     # Optional checks
-    if grep -qi "## Safety" "$readme_md"; then
+    if (( HAS_SAFETY )); then
         pass "README has section: Safety"
     else
         warn "README has no Safety section (optional)"
@@ -209,7 +292,7 @@ lint_skill() {
     # Catches drift on new skills that forget to include sample output, which
     # is the strongest "is this the skill I need?" signal for users browsing
     # the catalogue. Non-fatal so existing forks keep linting clean.
-    if grep -qi "## Example" "$readme_md"; then
+    if (( HAS_EXAMPLE )); then
         pass "README has section: Example"
     else
         warn "README has no Example section (recommended — adds a sample-output transcript)"
@@ -217,12 +300,8 @@ lint_skill() {
 
     # README first line description should match SKILL.md description
     # (skip the "# Title" heading — line 3 is the description in the README template).
-    # Read exactly three lines natively instead of spawning `sed -n '3p'`; the
-    # brace group's redirection closes the file after the third read.
-    local readme_desc=""
-    { IFS= read -r _; IFS= read -r _; IFS= read -r readme_desc; } < "$readme_md" || true
-    if [[ -n "$desc_val" && -n "$readme_desc" ]]; then
-        if [[ "$readme_desc" == "$desc_val" ]]; then
+    if [[ -n "$FM_DESC" && -n "$README_DESC" ]]; then
+        if [[ "$README_DESC" == "$FM_DESC" ]]; then
             pass "README description matches SKILL.md description"
         else
             warn "README line 3 description differs from SKILL.md description"
@@ -236,48 +315,45 @@ lint_skill() {
     # false-positives on path components like `/src/auth/`.
     # `grep -v` exits 1 when nothing prints, which is the success case here
     # (no bad invocations). Scope `|| true` to just the grep so real failures
-    # in awk / sed / sort propagate via pipefail. Use `grep -Fxv` so $name_val
+    # in awk / sed / sort propagate via pipefail. Use `grep -Fxv` so $FM_NAME
     # is treated as a literal whole-line string, not a regex — names with
     # metacharacters won't corrupt the match.
-    local bad_invocations
-    bad_invocations="$(awk '/^## Usage/{flag=1; next} /^## /{flag=0} flag' "$readme_md" \
-        | sed -nE 's|^[[:space:]]*>?[[:space:]]*(/[a-z][a-z0-9-]+).*$|\1|p' \
-        | sort -u \
-        | { grep -Fxv "/$name_val" || true; })"
-    if [[ -n "$bad_invocations" ]]; then
-        # Native parameter expansion: replace every literal newline with a space,
-        # no external `echo`/`tr` and no problematic flag-eating by `echo`.
-        warn "README Usage references non-self slash commands: ${bad_invocations//$'\n'/ }"
-    else
-        pass "README Usage examples reference /$name_val correctly"
+    #
+    # Gate on HAS_USAGE so a README missing the Usage section doesn't get a
+    # spurious "Usage examples reference /name correctly" pass alongside the
+    # already-emitted "README missing section: Usage" failure.
+    if (( HAS_USAGE )); then
+        local bad_invocations
+        bad_invocations="$(awk '/^## Usage/{flag=1; next} /^## /{flag=0} flag' "$readme_md" \
+            | sed -nE 's|^[[:space:]]*>?[[:space:]]*(/[a-z][a-z0-9-]+).*$|\1|p' \
+            | sort -u \
+            | { grep -Fxv "/$FM_NAME" || true; })"
+        if [[ -n "$bad_invocations" ]]; then
+            # Native parameter expansion: replace every literal newline with a space,
+            # no external `echo`/`tr` and no problematic flag-eating by `echo`.
+            warn "README Usage references non-self slash commands: ${bad_invocations//$'\n'/ }"
+        else
+            pass "README Usage examples reference /$FM_NAME correctly"
+        fi
     fi
 
     # Configuration table should include Takes argument and Allowed tools rows
-    if grep -qE '\|[[:space:]]*Takes argument[[:space:]]*\|' "$readme_md"; then
+    if (( HAS_TAKES_ARG_ROW )); then
         pass "Configuration table has 'Takes argument' row"
     else
         warn "Configuration table missing 'Takes argument' row"
     fi
-    if grep -qE '\|[[:space:]]*Allowed tools[[:space:]]*\|' "$readme_md"; then
+    if (( HAS_ALLOWED_TOOLS_ROW )); then
         pass "Configuration table has 'Allowed tools' row"
     else
         fail "Configuration table missing 'Allowed tools' row"
     fi
 
     # allowed-tools in SKILL.md frontmatter == Allowed tools row in README Configuration table.
-    # Native bash regex captures the cell in one pass — no grep|head|sed|sed|tr pipeline,
-    # no `\|` ambiguity between sed -E (ERE) and sed (BRE).
-    if [[ -n "$tools_val" ]]; then
-        local readme_tools="" rline
-        while IFS= read -r rline; do
-            if [[ "$rline" =~ ^\|[[:space:]]*Allowed[[:space:]]+tools[[:space:]]*\|[[:space:]]*(.*[^[:space:]])[[:space:]]*\|[[:space:]]*$ ]]; then
-                readme_tools="${BASH_REMATCH[1]//\`/}"
-                break
-            fi
-        done < "$readme_md"
+    if [[ -n "$FM_TOOLS" && -n "$README_TOOLS_CELL" ]]; then
         # Strip whitespace via parameter expansion (no external `tr`, no `echo` flag-eating).
-        local norm_skill_tools="${tools_val//[[:space:]]/}"
-        local norm_readme_tools="${readme_tools//[[:space:]]/}"
+        local norm_skill_tools="${FM_TOOLS//[[:space:]]/}"
+        local norm_readme_tools="${README_TOOLS_CELL//[[:space:]]/}"
         if [[ "$norm_skill_tools" == "$norm_readme_tools" ]]; then
             pass "Allowed tools row matches SKILL.md allowed-tools"
         else
