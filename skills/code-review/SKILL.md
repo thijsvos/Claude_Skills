@@ -1,7 +1,7 @@
 ---
 name: code-review
 description: Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers.
-allowed-tools: Read, Grep, Glob, Bash, Agent, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 argument-hint: "[path | identifier | ref | range]"

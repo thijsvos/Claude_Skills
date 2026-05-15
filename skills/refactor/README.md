@@ -67,7 +67,7 @@ The `===` comparison is variable-time; switch to `crypto.timingSafeEqual` to clo
 
 ---
 
-### Strengths
+### Looks Good
 
 - Rate-limit middleware is correctly applied to `/login` and `/refresh` only.
 - Error responses do not leak internal detail to clients.
