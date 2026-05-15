@@ -1,7 +1,7 @@
 ---
 name: code-review
 description: Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers.
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
 argument-hint: "[path | identifier | ref | range]"
@@ -239,5 +239,11 @@ If the user requests fixes:
 1. Address findings in severity order (Critical first, then Warnings)
 2. Show each change clearly
 3. After all fixes are applied, briefly note what was changed
+
+**Skill handoff.** If the review surfaced structural issues that go beyond the diff (e.g., a Critical finding that points at a long-standing architectural smell, or repeated patterns across the touched files), offer to hand off to `/refactor` via the `Skill` tool:
+
+> **Next:** Want me to run `/refactor` on the touched files for a deeper structural pass? It uses three orthogonal lenses (correctness/security, performance, structure) and produces an incremental plan.
+
+Only suggest the handoff when there's genuine signal that more work is warranted — don't surface it after a clean SHIP IT ✓ verdict or when only stylistic Suggestions remain.
 
 If the report verdict is **SHIP IT ✓** with no actionable findings, skip the fix offer and confirm the code looks good.
