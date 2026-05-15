@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- **`code-review` can now actually apply fixes its Step 4 promises.** Step 4 ("Address findings... Show each change clearly") existed in the body but `Edit` was missing from `allowed-tools`, so the skill could only review and never edit. Added `Edit` to both the SKILL.md frontmatter and the README's `Allowed tools` row.
+- **`dep-check` and `diagnose` IMPORTANT subagent blocks restored to the canonical wording.** Both skills had an abbreviated version of the block that omitted (a) the rationale for the model override (`The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis.`) and (b) the closing prohibition on general-purpose subagents (`Never use general-purpose subagents in this skill.`). Now matches `code-review`, `enhance`, `idiom-check`, `refactor`, and `test-gen` verbatim.
+- **`idiom-check` Step 5 now uses the safer `git stash create` + `git stash store` backup pattern** instead of `git stash push`. `git stash push` exits 0 even when there's nothing to stash, which makes a "revert all" hard to reason about; the explicit-SHA pattern gives the user a referenceable backup. This brings `idiom-check` in line with `refactor` and `docstring-check` (which migrated to this pattern in v0.1.0).
+- **`enhance` Phase 1 restructured to follow the standard `### Agent N: <Title>` convention.** Was 4 bold-prefixed bullet groups (Structure & Stack / Documentation & Intent / History & Trajectory / Quality & Gaps) launched via "Launch multiple exploration agents in parallel" with no fixed count; now 3 explicit `### Agent N:` subheadings (Structure & Stack / Documentation, Intent & History / Quality & Gaps), matching every other multi-agent skill and the canonical structure documented in `CLAUDE.md` and `create-skill` R4.
+
+### Changed
+
+- **Standardized "Strengths" callouts to "Looks Good" across every skill.** `code-review` and `idiom-check` already used "Looks Good"; `docstring-check` and `refactor` used the synonymous "Strengths". Picked "Looks Good" as the project-wide name. Affects 8 occurrences in `docstring-check/SKILL.md`, 2 in `refactor/SKILL.md`, and 1 in `refactor/README.md`.
+
 ## [0.2.2] - 2026-05-15
 
 ### Fixed
