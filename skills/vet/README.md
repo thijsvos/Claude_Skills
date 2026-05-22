@@ -1,4 +1,4 @@
-# Code Review
+# Vet
 
 Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers.
 
@@ -20,10 +20,10 @@ Analyzes code changes across multiple quality dimensions using parallel AI agent
 ## Usage
 
 ```
-/code-review                    # Auto-detect: staged → unstaged → branch diff
-/code-review src/auth/          # Review changes in a specific directory
-/code-review feature-branch     # Review branch diff vs current branch
-/code-review HEAD~3..HEAD       # Review a specific commit range
+/vet                    # Auto-detect: staged → unstaged → branch diff
+/vet src/auth/          # Review changes in a specific directory
+/vet feature-branch     # Review branch diff vs current branch
+/vet HEAD~3..HEAD       # Review a specific commit range
 ```
 
 ## Example
@@ -31,7 +31,7 @@ Analyzes code changes across multiple quality dimensions using parallel AI agent
 Reviewing a recent change to an auth handler:
 
 ```
-/code-review src/auth/handler.ts
+/vet src/auth/handler.ts
 ```
 
 <details>

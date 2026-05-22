@@ -13,7 +13,7 @@ A curated collection of custom skills for [Claude Code](https://docs.anthropic.c
 |-------|-------------|-------|--------|---------|
 | [enhance](skills/enhance/) | Performs deep multi-phase project analysis to identify and recommend the single most impactful addition to implement. | Opus | Max | [view](skills/enhance/README.md#example) |
 | [github-audit](skills/github-audit/) | Audits a GitHub repository against best practices and provides prioritized recommendations for README, license, community health, CI/CD, and repository settings. | Opus | Max | [view](skills/github-audit/README.md#example) |
-| [code-review](skills/code-review/) | Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers. | Opus | Max | [view](skills/code-review/README.md#example) |
+| [vet](skills/vet/) | Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers. | Opus | Max | [view](skills/vet/README.md#example) |
 | [test-gen](skills/test-gen/) | Analyzes code to generate comprehensive tests covering happy paths, edge cases, error handling, and integration points, matching the project's existing test conventions. | Opus | Max | [view](skills/test-gen/README.md#example) |
 | [dep-check](skills/dep-check/) | Scans all dependency declarations across ecosystems, checks for updates and vulnerabilities, and produces a prioritized update plan with testing recommendations. | Opus | Max | [view](skills/dep-check/README.md#example) |
 | [diagnose](skills/diagnose/) | Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses. | Opus | Max | [view](skills/diagnose/README.md#example) |
@@ -46,7 +46,7 @@ Once installed, invoke any skill inside Claude Code:
 ```
 > /enhance
 > /github-audit
-> /code-review src/auth/
+> /vet src/auth/
 > /test-gen src/utils.ts
 > /dep-check
 > /diagnose TypeError: Cannot read properties of undefined

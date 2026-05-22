@@ -1,5 +1,5 @@
 ---
-name: code-review
+name: vet
 description: Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers.
 when_to_use: Use when the user asks for a review of pending changes, wants a verdict on a diff, asks "is this ready to merge", or names a file/branch/commit-range to review.
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
@@ -54,7 +54,7 @@ Resolve what code to review based on the argument and current git state.
    ```
 
 4. If none of the above match, inform the user and stop:
-   > Could not resolve the argument as a file path, branch, or commit range. Try: `/code-review src/auth/` (directory), `/code-review feature-branch` (branch), or `/code-review HEAD~3..HEAD` (range).
+   > Could not resolve the argument as a file path, branch, or commit range. Try: `/vet src/auth/` (directory), `/vet feature-branch` (branch), or `/vet HEAD~3..HEAD` (range).
 
 **If no argument was provided**, auto-detect in this priority order:
 
@@ -70,7 +70,7 @@ Resolve what code to review based on the argument and current git state.
    git diff "$default_branch"...HEAD
    ```
 4. If none of the above produce changes, inform the user and stop:
-   > No changes found to review. Working tree is clean and branch matches the default branch. To review specific files, try: `/code-review src/some-file.ts`
+   > No changes found to review. Working tree is clean and branch matches the default branch. To review specific files, try: `/vet src/some-file.ts`
 
 **After resolving scope**, capture:
 - The full diff content

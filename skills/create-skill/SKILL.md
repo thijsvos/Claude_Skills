@@ -145,7 +145,7 @@ Not every skill needs all 4 steps. Analysis-only skills may have 3 steps. Skills
 
 If you can't name three independent lenses that genuinely benefit from parallel investigation, **do not add subagents** — put the work directly in the skill body. Three near-duplicate "agents" that all read the same files and produce overlapping findings is the failure mode the simplicity bias exists to prevent.
 
-If the answer is yes — three genuinely orthogonal lenses (e.g., `code-review`'s correctness / security / performance / conventions split, or `refactor`'s correctness-security / performance / structure split) — then proceed with the rest of this rule.
+If the answer is yes — three genuinely orthogonal lenses (e.g., `vet`'s correctness / security / performance / conventions split, or `refactor`'s correctness-security / performance / structure split) — then proceed with the rest of this rule.
 
 **Configuration (mandatory when using subagents):**
 ```
@@ -196,7 +196,7 @@ Each skill uses a **unique single-letter prefix** for its findings:
 
 | Existing | Prefix | Meaning |
 |----------|--------|---------|
-| code-review | `C`, `W`, `S` | Critical, Warning, Suggestion |
+| vet | `C`, `W`, `S` | Critical, Warning, Suggestion |
 | test-gen | `T` | Test |
 | diagnose | `H` | Hypothesis |
 | refactor | `R` | Refactoring |
@@ -402,7 +402,7 @@ Then collect the structured requirements. **Issue a single `AskUserQuestion` cal
 
 3. **Subagent fan-out** — single-select (per R4's decision gate), options:
    - `No subagents — single linear flow` (default; mirrors `github-ship`)
-   - `3 Explore subagents — three orthogonal analysis lenses` (mirrors `code-review`, `refactor`)
+   - `3 Explore subagents — three orthogonal analysis lenses` (mirrors `vet`, `refactor`)
 
 For the freeform requirements that don't fit multiple-choice (skill name, workflow design, output format, finding-ID letter), follow up with plain-text questions or batch them into a second `AskUserQuestion` call if structured options are appropriate. Specifically still gather:
 
