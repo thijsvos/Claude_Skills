@@ -4,7 +4,7 @@ Audits a codebase through a programming-language-specific idiom lens, produces a
 
 ## What It Does
 
-Where `/code-review` reviews a diff and `/refactor` works against a single target, `/idiom-check` audits the **whole codebase** through a **language-specific** idiom lens. The output is calibrated to the language: a Rust codebase is reviewed for ownership and trait design; a Python codebase for Pythonic constructs and modern type hints; a Go codebase for error-wrapping and channel idioms — and so on.
+Where `/vet` reviews a diff and `/refactor` works against a single target, `/idiom-check` audits the **whole codebase** through a **language-specific** idiom lens. The output is calibrated to the language: a Rust codebase is reviewed for ownership and trait design; a Python codebase for Pythonic constructs and modern type hints; a Go codebase for error-wrapping and channel idioms — and so on.
 
 The skill is delivered in 5 steps:
 

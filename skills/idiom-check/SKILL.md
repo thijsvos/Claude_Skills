@@ -1,7 +1,7 @@
 ---
 name: idiom-check
 description: Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles.
-when_to_use: Use when the user asks for a language-specific idiom audit (e.g., "are we writing idiomatic Rust", "is this Pythonic", "Go-style review") of the whole codebase. Distinct from /code-review (which works on a diff) and /refactor (single target).
+when_to_use: Use when the user asks for a language-specific idiom audit (e.g., "are we writing idiomatic Rust", "is this Pythonic", "Go-style review") of the whole codebase. Distinct from /vet (which works on a diff) and /refactor (single target).
 allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
 effort: max
@@ -385,8 +385,8 @@ default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@
 >
 > Note: when merging these PRs, avoid `gh pr merge --delete-branch` if you stack any of them on top of each other — it closes dependent PRs.
 
-**Skill handoff.** After the PRs are open, offer to do an independent second pass via `/code-review` on each bundle's diff:
+**Skill handoff.** After the PRs are open, offer to do an independent second pass via `/vet` on each bundle's diff:
 
-> **Next:** Want me to hand off to `/code-review` for one or more of these PRs? Useful as a second pair of eyes before you merge — `/code-review` covers correctness, security, and conventions through a different lens than the idiom audit did.
+> **Next:** Want me to hand off to `/vet` for one or more of these PRs? Useful as a second pair of eyes before you merge — `/vet` covers correctness, security, and conventions through a different lens than the idiom audit did.
 
-Use the `Skill` tool to invoke `/code-review` (with the PR's branch as the argument) if the user agrees. Skip the offer when the bundles were trivially small (single-file Low-severity polish) or when the user wants to merge immediately.
+Use the `Skill` tool to invoke `/vet` (with the PR's branch as the argument) if the user agrees. Skip the offer when the bundles were trivially small (single-file Low-severity polish) or when the user wants to merge immediately.
