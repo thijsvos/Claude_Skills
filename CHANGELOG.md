@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-05-16
+
 ### Changed
 
 - **Renamed the `code-review` skill to `vet`** to avoid collision with Claude Code's built-in `/review` and `/security-review` commands (the old `/code-review` was confusingly adjacent). Behavior, `description`, `allowed-tools`, the `argument-hint`, and the report format are unchanged — only the invocation (`/code-review` → `/vet`), the skill directory (`skills/code-review/` → `skills/vet/`), and the README title (`# Code Review` → `# Vet`) changed. Cross-skill handoff and example references in `idiom-check`, `refactor`, `create-skill`, the root `README.md`, and `CLAUDE.md` were updated to `/vet`. Re-run `./install.sh` to create the `~/.claude/skills/vet` symlink and remove the now-stale `~/.claude/skills/code-review` link.
