@@ -38,7 +38,7 @@ Reviewing a recent change to an auth handler:
 <summary>Sample report</summary>
 
 ```
-## Code Review: src/auth/handler.ts
+## Vet: src/auth/handler.ts
 
 **Scope**: 1 file changed (+47, -12) | **Findings**: 1 critical, 2 warnings, 3 suggestions
 

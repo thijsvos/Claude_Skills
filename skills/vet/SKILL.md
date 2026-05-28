@@ -199,7 +199,7 @@ Collect all findings from the 3 agents and produce a single, structured report.
 **Use this report format:**
 
 ```
-## Code Review: <scope description>
+## Vet: <scope description>
 
 **Scope**: <N files changed (+X, -Y)> | **Findings**: <A critical, B warnings, C suggestions>
 
