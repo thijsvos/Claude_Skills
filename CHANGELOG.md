@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-05-28
+
+### Fixed
+
+- **`lint.sh` function-header comments now match the code they document.** Two block comments listed an outdated set of mutated globals — leftover drift from the v0.2.3 `takes-arg` → `argument-hint` migration that updated the function bodies but not the headers above them. `scan_skill_md()` claimed to set a `FM_CLOSED` global that doesn't exist (close-delimiter is tracked locally as `past_fm`) while omitting the `FM_ARG_HINT` and `FM_HAS_TAKES_ARG` it actually does set; `scan_readme_md()` documented a `HAS_TAKES_ARG_ROW` that was renamed to `HAS_ARG_HINT_ROW` and `HAS_LEGACY_TAKES_ARG_ROW`. Comment-only fix; no behavior change, all 259 lint checks still pass.
+
 ## [0.2.5] - 2026-05-28
 
 ### Fixed

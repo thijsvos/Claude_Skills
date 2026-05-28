@@ -57,8 +57,10 @@ fail() { printf '  %s[fail]%s %s\n' "$RED"    "$NC" "$1"; TOTAL_FAIL=$((TOTAL_FA
 warn() { printf '  %s[warn]%s %s\n' "$YELLOW" "$NC" "$1"; TOTAL_WARN=$((TOTAL_WARN + 1)); }
 
 # Scan SKILL.md in a single pass. Sets globals:
-#   FM_OPENED, FM_CLOSED                          — frontmatter delimiter presence
+#   FM_OPENED                                     — frontmatter opening-delimiter seen
 #   FM_NAME, FM_DESC, FM_TOOLS                    — required frontmatter values
+#   FM_ARG_HINT                                   — optional argument-hint value
+#   FM_HAS_TAKES_ARG                              — legacy takes-arg field detected (for migration warning)
 #   BODY_HAS_ENTER, BODY_HAS_EXIT                 — EnterPlanMode/ExitPlanMode references
 #   BODY_HAS_EXPLORE, BODY_HAS_IMPORTANT          — Explore subagent + canonical IMPORTANT block
 #
@@ -113,7 +115,8 @@ scan_skill_md() {
 #   README_REQUIRED_FOUND[]                       — parallel to REQUIRED_README_SECTIONS
 #   HAS_USAGE                                     — convenience flag for the Usage-gated check below
 #   HAS_SAFETY, HAS_EXAMPLE                       — optional / recommended sections
-#   HAS_TAKES_ARG_ROW, HAS_ALLOWED_TOOLS_ROW      — Configuration table rows
+#   HAS_ARG_HINT_ROW, HAS_LEGACY_TAKES_ARG_ROW,
+#   HAS_ALLOWED_TOOLS_ROW                         — Configuration table rows
 #   README_DESC                                   — line 3 (one-line description per template)
 #   README_TOOLS_CELL                             — right-trimmed Allowed tools cell, backticks stripped
 #
