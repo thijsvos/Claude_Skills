@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-05-28
+
+### Fixed
+
+- **`install.sh` now prunes stale skill symlinks (install-all mode).** Previously the installer only created or replaced links for skills that still exist in `skills/`, so a skill that was renamed or removed — e.g. `code-review` → `vet` in v0.2.4 — left a dangling `~/.claude/skills/<old-name>` symlink that re-running `./install.sh` never cleaned up, contradicting the v0.2.4 note that said it would. The installer now removes any symlink under `~/.claude/skills/` that points into this repo's `skills/` directory but whose source is gone. Symlinks pointing elsewhere, dangling links outside this repo, and real directories the user created are all left untouched, and pruning only runs when `./install.sh` is invoked with no arguments.
+- **`vet` report heading now reads `## Vet:` instead of `## Code Review:`.** The v0.2.4 rename updated the skill's invocation, directory, and README title but left the generated report — and the sample transcript in `skills/vet/README.md` — branded with the old `Code Review` name. Both now match the skill's name.
+
 ## [0.2.4] - 2026-05-16
 
 ### Changed

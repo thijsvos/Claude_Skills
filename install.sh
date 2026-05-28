@@ -122,6 +122,36 @@ install_skill() {
     emit "$GREEN" "installed" "$skill_name -> $source"
 }
 
+# Remove symlinks in $TARGET_DIR that point into this repo's $SKILLS_DIR but
+# whose source no longer exists — skills renamed or deleted between `git pull`s
+# (e.g. `code-review` -> `vet`). The install loop only ever visits skills that
+# still exist, so without this a stale ~/.claude/skills/<old-name> symlink
+# dangles forever. Scoped deliberately to avoid collateral damage:
+#   - symlinks only (a real directory the user created is never touched);
+#   - only links resolving under $SKILLS_DIR (skills symlinked from elsewhere,
+#     or unrelated plugins, are left alone);
+#   - only when the target is missing (live skills are kept).
+# Runs in "install all" mode only — a targeted `install.sh <name>` must not
+# prune skills the user didn't name. Mutates the global exit_code on failure.
+prune_stale_links() {
+    [[ -d "$TARGET_DIR" ]] || return 0
+    shopt -s nullglob
+    local link dest
+    for link in "$TARGET_DIR"/*; do
+        [[ -L "$link" ]] || continue
+        dest="$(readlink "$link")"
+        [[ "$dest" == "$SKILLS_DIR"/* ]] || continue
+        [[ -e "$link" ]] && continue
+        if rm "$link"; then
+            emit "$YELLOW" "pruned" "${link##*/} -- removed stale symlink (source gone: $dest)"
+        else
+            emit "$RED" "error" "${link##*/} -- failed to remove stale symlink"
+            exit_code=1
+        fi
+    done
+    shopt -u nullglob
+}
+
 printf '%sClaude Code Skills Installer%s\n' "$BOLD" "$NC"
 printf '============================\n\n'
 
@@ -147,6 +177,9 @@ else
         install_skill "$skill_name" || exit_code=1
     done
     shopt -u nullglob
+    # Only safe in install-all mode: every current skill has just been linked,
+    # so any remaining dangling link into $SKILLS_DIR is genuinely orphaned.
+    prune_stale_links
 fi
 
 printf '\nDone. Skills are symlinked from ~/.claude/skills/ to this repository.\n'
