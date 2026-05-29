@@ -12,6 +12,8 @@ Analyzes code changes across multiple quality dimensions using parallel AI agent
 4. **Findings Report** — Structured report with severity levels (Critical / Warning / Suggestion), file:line references, concrete fix suggestions, and a verdict (Ship It / Pass With Warnings / Needs Changes)
 5. **Remediation** — Offers to fix identified issues using finding IDs (e.g., "fix C1 and W2")
 
+**Ultra mode** (`/vet ultra`) — an opt-in deep tier that orchestrates the review with the Workflow tool: each dimension's findings are **adversarially verified** by an independent three-vote panel (a finding survives only if a majority can't refute it) before they reach the report, trading latency and tokens for higher precision. The default `/vet` keeps the fast three-agent fan-out.
+
 ## Requirements
 
 - Claude Code with Opus model access
@@ -24,6 +26,8 @@ Analyzes code changes across multiple quality dimensions using parallel AI agent
 /vet src/auth/          # Review changes in a specific directory
 /vet feature-branch     # Review branch diff vs current branch
 /vet HEAD~3..HEAD       # Review a specific commit range
+/vet ultra              # Deep review: orchestrated find → adversarial-verify → synthesize
+/vet ultra src/auth/    # Deep review scoped to a directory
 ```
 
 ## Example
@@ -75,12 +79,12 @@ The refresh-token branch returns the *old* token to the client even after rotati
 |---------|-------|
 | Model | `opus` |
 | Effort | `max` |
-| Argument hint | `[path \| identifier \| ref \| range]` |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode |
+| Argument hint | `[ultra] [path \| identifier \| ref \| range]` |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Workflow, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 
-- **Read-only analysis**: All review agents use the Explore subagent type, which cannot modify files
+- **Read-only analysis**: All review agents use the Explore subagent type, which cannot modify files — including Ultra mode, whose Workflow orchestration spawns its agents with `agentType: 'Explore'`
 - **No auto-fix**: Files are only modified if you explicitly approve fixes after seeing the report
 - **No network access**: The skill does not use WebSearch or WebFetch — all analysis is local
 - **No commits or pushes**: The skill never commits, pushes, or publishes — it only reviews and optionally edits local files

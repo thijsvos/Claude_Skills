@@ -1,0 +1,305 @@
+{
+  "$schema": "schemas/skill-frontmatter.schema.json",
+  "manifest_version": 1,
+  "generated_from": "skills/",
+  "skills": [
+    {
+      "name": "create-skill",
+      "description": "Interactive skill generator that scaffolds new skills following all project conventions, serving as the definitive reference for skill creation.",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Agent",
+        "Edit",
+        "Write",
+        "AskUserQuestion",
+        "EnterPlanMode",
+        "ExitPlanMode"
+      ],
+      "model": "opus",
+      "effort": "max",
+      "argument_hint": "[skill description]",
+      "when_to_use": "Use when the user wants to create a new Claude Code skill, asks how to package a workflow as a skill, or describes a repeatable procedure they want callable as `/something`.",
+      "uses_subagents": true,
+      "handoffs": [],
+      "finding_id_prefixes": [
+        "X"
+      ]
+    },
+    {
+      "name": "dep-check",
+      "description": "Scans all dependency declarations across ecosystems, checks for updates and vulnerabilities, and produces a prioritized update plan with testing recommendations.",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Agent",
+        "WebSearch",
+        "WebFetch",
+        "Edit",
+        "AskUserQuestion",
+        "TaskCreate",
+        "TaskUpdate",
+        "Skill",
+        "EnterPlanMode",
+        "ExitPlanMode"
+      ],
+      "model": "opus",
+      "effort": "max",
+      "argument_hint": "[manifest | directory | ecosystem]",
+      "when_to_use": "Use when the user asks about outdated dependencies, package CVEs, pinned-version freshness, dependabot/renovate gaps, or wants an upgrade plan across ecosystems (npm, pip, cargo, go, gem, composer, docker, GitHub Actions).",
+      "uses_subagents": true,
+      "handoffs": [
+        "test-gen"
+      ],
+      "finding_id_prefixes": [
+        "V"
+      ]
+    },
+    {
+      "name": "diagnose",
+      "description": "Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses.",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Agent",
+        "WebSearch",
+        "WebFetch",
+        "Edit",
+        "AskUserQuestion",
+        "Skill",
+        "EnterPlanMode",
+        "ExitPlanMode"
+      ],
+      "model": "opus",
+      "effort": "max",
+      "argument_hint": "[error | path | identifier]",
+      "when_to_use": "Use when the user pastes an error message or stack trace, reports unexpected behavior, asks \"why is X failing\", or wants help finding the root cause of a CI/test failure.",
+      "uses_subagents": true,
+      "handoffs": [
+        "test-gen"
+      ],
+      "finding_id_prefixes": [
+        "H"
+      ]
+    },
+    {
+      "name": "docstring-check",
+      "description": "Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies behavior-preserving fixes matching the project's detected convention.",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Agent",
+        "Edit",
+        "Write",
+        "AskUserQuestion",
+        "TaskCreate",
+        "TaskUpdate",
+        "EnterPlanMode",
+        "ExitPlanMode"
+      ],
+      "model": "opus",
+      "effort": "max",
+      "argument_hint": "[path | symbol | branch | range]",
+      "when_to_use": "Use when the user asks about missing/outdated docstrings, signature-vs-doc drift, docstring coverage on the public API, or wants to align documentation to a detected project style (Google/NumPy/reST/TSDoc/JSDoc/godoc/rustdoc/Javadoc).",
+      "uses_subagents": true,
+      "handoffs": [],
+      "finding_id_prefixes": [
+        "D"
+      ]
+    },
+    {
+      "name": "enhance",
+      "description": "Performs deep multi-phase project analysis to identify and recommend the single most impactful addition to implement.",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Agent",
+        "WebSearch",
+        "WebFetch",
+        "EnterPlanMode",
+        "ExitPlanMode",
+        "AskUserQuestion"
+      ],
+      "model": "opus",
+      "effort": "max",
+      "when_to_use": "Use when the user wants a strategic deep-dive that recommends the single highest-impact addition to build next — not a code review or a list of improvements. User-triggered only.",
+      "disable_model_invocation": true,
+      "uses_subagents": true,
+      "handoffs": [],
+      "finding_id_prefixes": []
+    },
+    {
+      "name": "github-audit",
+      "description": "Audits a GitHub repository against best practices and provides prioritized recommendations for README, license, community health, CI/CD, and repository settings.",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Agent",
+        "WebSearch",
+        "WebFetch",
+        "AskUserQuestion",
+        "Skill",
+        "EnterPlanMode",
+        "ExitPlanMode"
+      ],
+      "model": "opus",
+      "effort": "max",
+      "when_to_use": "Use when the user asks for a GitHub repo audit, wants to evaluate README/license/community-health/CI-CD coverage, or asks \"is this repo ready for public release\".",
+      "uses_subagents": true,
+      "handoffs": [
+        "dep-check",
+        "docstring-check",
+        "github-ship",
+        "refactor",
+        "test-gen"
+      ],
+      "finding_id_prefixes": []
+    },
+    {
+      "name": "github-ship",
+      "description": "Turns local changes into a GitHub issue and linked PR, or cleans up the branch if the PR was already merged. Auto-detects which.",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "AskUserQuestion",
+        "EnterPlanMode",
+        "ExitPlanMode"
+      ],
+      "model": "opus",
+      "effort": "max",
+      "when_to_use": "Use when the user wants to ship pending changes as a GitHub issue + PR pair, or wants to clean up a feature branch after the PR has been merged on GitHub. Auto-detects create vs cleanup mode.",
+      "uses_subagents": false,
+      "handoffs": [],
+      "finding_id_prefixes": []
+    },
+    {
+      "name": "idiom-check",
+      "description": "Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles.",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Agent",
+        "Edit",
+        "Write",
+        "AskUserQuestion",
+        "TaskCreate",
+        "TaskUpdate",
+        "Skill",
+        "EnterPlanMode",
+        "ExitPlanMode"
+      ],
+      "model": "opus",
+      "effort": "max",
+      "when_to_use": "Use when the user asks for a language-specific idiom audit (e.g., \"are we writing idiomatic Rust\", \"is this Pythonic\", \"Go-style review\") of the whole codebase. Distinct from /vet (which works on a diff) and /refactor (single target).",
+      "uses_subagents": true,
+      "handoffs": [
+        "vet"
+      ],
+      "finding_id_prefixes": [
+        "B",
+        "I"
+      ]
+    },
+    {
+      "name": "refactor",
+      "description": "Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes.",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Agent",
+        "Edit",
+        "Write",
+        "AskUserQuestion",
+        "TaskCreate",
+        "TaskUpdate",
+        "Skill",
+        "EnterPlanMode",
+        "ExitPlanMode"
+      ],
+      "model": "opus",
+      "effort": "max",
+      "argument_hint": "[path | identifier | branch | range]",
+      "when_to_use": "Use when the user wants to refactor a specific file/module/function — distinct from /vet (which works on a diff) and /idiom-check (which audits the whole codebase through one language lens).",
+      "uses_subagents": true,
+      "handoffs": [
+        "test-gen"
+      ],
+      "finding_id_prefixes": [
+        "R"
+      ]
+    },
+    {
+      "name": "test-gen",
+      "description": "Analyzes code to generate comprehensive tests covering happy paths, edge cases, error handling, and integration points, matching the project's existing test conventions.",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Agent",
+        "Edit",
+        "Write",
+        "AskUserQuestion",
+        "EnterPlanMode",
+        "ExitPlanMode"
+      ],
+      "model": "opus",
+      "effort": "max",
+      "argument_hint": "[path | identifier]",
+      "when_to_use": "Use when the user asks to generate, write, or create tests for a specific file, function, class, or directory. Also after a refactor or bug fix when the user wants regression coverage.",
+      "uses_subagents": true,
+      "handoffs": [],
+      "finding_id_prefixes": [
+        "T"
+      ]
+    },
+    {
+      "name": "vet",
+      "description": "Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers.",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Agent",
+        "Workflow",
+        "Edit",
+        "AskUserQuestion",
+        "Skill",
+        "EnterPlanMode",
+        "ExitPlanMode"
+      ],
+      "model": "opus",
+      "effort": "max",
+      "argument_hint": "[ultra] [path | identifier | ref | range]",
+      "when_to_use": "Use when the user asks for a review of pending changes, wants a verdict on a diff, asks \"is this ready to merge\", or names a file/branch/commit-range to review.",
+      "uses_subagents": true,
+      "handoffs": [
+        "refactor"
+      ],
+      "finding_id_prefixes": [
+        "C",
+        "S",
+        "W"
+      ]
+    }
+  ]
+}

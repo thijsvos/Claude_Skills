@@ -1,6 +1,7 @@
 ---
 name: enhance
 description: Performs deep multi-phase project analysis to identify and recommend the single most impactful addition to implement.
+when_to_use: Use when the user wants a strategic deep-dive that recommends the single highest-impact addition to build next — not a code review or a list of improvements. User-triggered only.
 disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, EnterPlanMode, ExitPlanMode, AskUserQuestion
 model: opus
@@ -15,7 +16,7 @@ Execute each phase thoroughly before moving to the next. Use subagents for paral
 
 **Ask the user questions at any point during the analysis when it would improve the result.** Don't make assumptions about priorities, pain points, or goals when you can ask. Examples: after Phase 1, ask what areas matter most to them; during Phase 3, confirm which problems they actually feel; before Phase 4, ask if there are constraints or preferences you should know about. The goal is a recommendation tailored to what the user needs right now, not a generic suggestion.
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to Claude Opus 4.7, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
 
 ---
 
