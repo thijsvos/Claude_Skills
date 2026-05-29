@@ -9,7 +9,7 @@ Where `/vet` reviews a diff and `/refactor` works against a single target, `/idi
 The skill is delivered in 5 steps:
 
 1. **Detect Language and Resolve Scope** — Inspects manifests (`Cargo.toml`, `go.mod`, `pyproject.toml`, `package.json`, `Gemfile`, …), counts source files per language to pick the dominant one, gathers project conventions (`CLAUDE.md`, `.editorconfig`, language-specific lint configs), and narrows the scope when the codebase is large.
-2. **Multi-Lens Language-Specific Analysis** — Launches 3 parallel read-only Opus 4.7 agents, each looking through one of three orthogonal language-specific lenses (e.g. for Rust: Ownership / Type-System / Idioms-&-Control-Flow). Each agent reads the full files in scope, caps findings at ~12, and frames every finding as "why in THIS codebase".
+2. **Multi-Lens Language-Specific Analysis** — Launches 3 parallel read-only Opus agents, each looking through one of three orthogonal language-specific lenses (e.g. for Rust: Ownership / Type-System / Idioms-&-Control-Flow). Each agent reads the full files in scope, caps findings at ~12, and frames every finding as "why in THIS codebase".
 3. **Severity-Sorted Report** — Synthesizes findings (deduplicated, prioritized by severity and confidence) into a structured report with file:line, current pattern, idiomatic alternative, and rationale. Every report includes mandatory "Looks Good" callouts so positive practices aren't drowned out.
 4. **PR-Sized Remediation Bundles** — Groups findings into tight, mergeable bundles (3-7 findings, 1-3 files, ~30-60 minute review effort each). Each bundle gets a title, theme, effort estimate, and risk note.
 5. **Full Ship** — After approval, applies each bundle on its own branch off the default branch, commits, pushes, and opens an independent pull request via `gh pr create`. The user merges the PRs manually on GitHub.
@@ -18,7 +18,7 @@ The skill explicitly supports Rust, Python, TypeScript / JavaScript, Go, and Rub
 
 ## Requirements
 
-- Claude Code with **Opus model** access (resolves to Claude Opus 4.7).
+- Claude Code with **Opus model** access (resolves to the latest Claude Opus).
 - Git repository with a GitHub `origin` remote.
 - `gh` CLI installed and authenticated (`gh auth status`) — used for `gh pr create` in Step 5.
 - A detectable primary language with a recognized manifest in the repo root.

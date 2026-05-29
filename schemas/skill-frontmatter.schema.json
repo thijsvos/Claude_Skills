@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/thijsvos/Claude_Skills/main/schemas/skill-frontmatter.schema.json",
+  "title": "Claude Code SKILL.md frontmatter",
+  "description": "Contract for the YAML frontmatter of a SKILL.md file. Mirrors the official Claude Code skill spec as documented in CLAUDE.md (Required + Optional field tables). This schema is the machine-readable source of truth; the CLAUDE.md tables remain the human-readable view. Adding a new official Claude Code frontmatter field requires adding it here too — additionalProperties is false so unknown keys (typos, stale fields) are rejected.",
+  "type": "object",
+  "required": ["name", "description", "allowed-tools"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Skill identifier. Must match the directory name. Lowercase kebab-case.",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "maxLength": 64
+    },
+    "description": {
+      "type": "string",
+      "description": "One-line summary, verb-first, ending with a period. Mirrored verbatim in the skill README line 3 and the root README skills table.",
+      "pattern": "\\.$",
+      "maxLength": 250
+    },
+    "allowed-tools": {
+      "type": "string",
+      "description": "Comma-separated list of tool names the skill may use. Each token is a tool name (e.g. Read, Grep, Agent, EnterPlanMode).",
+      "pattern": "^[A-Za-z]+(\\s*,\\s*[A-Za-z]+)*$"
+    },
+    "model": {
+      "description": "Model override for the skill turn.",
+      "enum": ["opus", "sonnet", "haiku", "inherit"]
+    },
+    "effort": {
+      "description": "Effort level for the skill turn.",
+      "enum": ["low", "medium", "high", "xhigh", "max"]
+    },
+    "argument-hint": {
+      "type": "string",
+      "description": "Autocomplete hint shown after the slash command (e.g. \"[path | identifier]\").",
+      "maxLength": 100
+    },
+    "arguments": {
+      "type": "array",
+      "description": "Named positional arguments enabling $name substitution in the body.",
+      "items": { "type": "string" }
+    },
+    "when_to_use": {
+      "type": "string",
+      "description": "Trigger-phrase guidance for auto-invocation. Appended to description in the skill listing (counts toward the 1,536-character listing cap).",
+      "maxLength": 600
+    },
+    "paths": {
+      "type": "array",
+      "description": "Glob patterns that auto-activate the skill when matching files are in context.",
+      "items": { "type": "string" }
+    },
+    "disable-model-invocation": {
+      "type": "boolean",
+      "description": "When true, the skill is strictly user-triggered (does not block Agent-tool subagents)."
+    },
+    "user-invocable": {
+      "type": "boolean",
+      "description": "When false, hides the skill from the / menu (background-knowledge skills only Claude invokes)."
+    },
+    "context": {
+      "description": "Set to fork to run the skill in a forked subagent context (body becomes the subagent prompt).",
+      "enum": ["fork"]
+    },
+    "agent": {
+      "type": "string",
+      "description": "Subagent type to use when context: fork is set (e.g. Explore, Plan, general-purpose, or a custom agent)."
+    },
+    "hooks": {
+      "type": "object",
+      "description": "Skill-scoped hooks."
+    },
+    "shell": {
+      "description": "Shell used for !`command` dynamic context injection blocks.",
+      "enum": ["bash", "powershell"]
+    },
+    "takes-arg": {
+      "type": "boolean",
+      "deprecated": true,
+      "description": "Deprecated repo-internal field, never recognized by Claude Code. Use argument-hint instead. Allowed here only so legacy forks fail schema validation softly (lint.sh emits a separate migration warning)."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "context": { "const": "fork" } }, "required": ["context"] },
+      "then": { "required": ["agent"] }
+    }
+  ]
+}

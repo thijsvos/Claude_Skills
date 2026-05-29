@@ -23,6 +23,40 @@ A curated collection of custom skills for [Claude Code](https://docs.anthropic.c
 | [github-ship](skills/github-ship/) | Turns local changes into a GitHub issue and linked PR, or cleans up the branch if the PR was already merged. Auto-detects which. | Opus | Max | [view](skills/github-ship/README.md#example) |
 | [idiom-check](skills/idiom-check/) | Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles. | Opus | Max | [view](skills/idiom-check/README.md#example) |
 
+<!-- handoff-graph:start -->
+<details>
+<summary><strong>Cross-skill handoff graph</strong> — how skills chain into one another</summary>
+
+Several skills can hand off to another skill after their primary action (e.g. `/vet` → `/refactor`). Auto-generated from [`skills.json`](skills.json) by [`tools/generate-handoff-graph.sh`](tools/generate-handoff-graph.sh); full version in [docs/handoff-graph.md](docs/handoff-graph.md).
+
+```mermaid
+flowchart LR
+    create_skill["create-skill"]
+    dep_check["dep-check"]
+    diagnose["diagnose"]
+    docstring_check["docstring-check"]
+    enhance["enhance"]
+    github_audit["github-audit"]
+    github_ship["github-ship"]
+    idiom_check["idiom-check"]
+    refactor["refactor"]
+    test_gen["test-gen"]
+    vet["vet"]
+    dep_check --> test_gen
+    diagnose --> test_gen
+    github_audit --> dep_check
+    github_audit --> docstring_check
+    github_audit --> github_ship
+    github_audit --> refactor
+    github_audit --> test_gen
+    idiom_check --> vet
+    refactor --> test_gen
+    vet --> refactor
+```
+
+</details>
+<!-- handoff-graph:end -->
+
 ## Quick Start
 
 ### Install All Skills

@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **`schemas/skill-frontmatter.schema.json` — a JSON Schema 2020-12 contract for SKILL.md frontmatter.** Encodes the full Claude Code skill spec from `CLAUDE.md` (required + optional fields) as a machine-readable, publishable, `$ref`-able artifact: typed enums (`model`, `effort`, `shell`, `context`), kebab-case `name`, period-terminated `description`, comma-separated `allowed-tools`, and a conditional requiring `agent` when `context: fork`. `additionalProperties: false` rejects unknown keys (typos, stale fields). `lint.sh` validates every skill against it via `check-jsonschema`; CI installs the tool, local runs skip it with a `[note]` if absent.
+- **`skills.json` — an auto-generated machine-readable manifest of the catalogue.** Produced by `tools/generate-manifest.sh` (frontmatter + body signals: subagent use, handoff targets, finding-ID prefixes). `lint.sh` fails if the committed manifest drifts from a fresh generation, so it stays a faithful index of `skills/`. Unblocks future tooling (discovery, IDE integration, dashboards).
+- **`docs/handoff-graph.md` and a README diagram — an auto-generated Mermaid graph of cross-skill handoffs.** Produced by `tools/generate-handoff-graph.sh` from `skills.json` and embedded in the root README between `<!-- handoff-graph:start -->`/`<!-- handoff-graph:end -->` markers, giving the catalogue its first visual, GitHub-rendered representation as a system rather than a flat table.
+- **Six new `lint.sh` checks**, each closing a documented-but-previously-unenforced convention: (1) frontmatter schema validation; (2) root README skills-table description parity (hard error — see Fixed below); (3) cross-skill handoff targets resolve to installed skills; (4) `Skill`-tool / body-handoff coupling; (5) finding-ID prefix uniqueness across skills; (6) `## Phase N` / `## Step N` body style matching the README's "N-phase" / "N steps" phrasing.
+- **`/vet ultra` — an opt-in deep-review tier orchestrated with the `Workflow` tool.** The default `/vet` still runs the fast three-Explore fan-out; `/vet ultra [scope]` instead drives a `Workflow` pipeline that finds across the three review dimensions and then **adversarially verifies** every finding with an independent three-vote skeptic panel (a finding survives only if a majority can't refute it), trading latency and tokens for higher precision. Subagents inherit the session's Opus and stay read-only via `agentType: 'Explore'`. Establishes the repo's first "opt-in orchestration tier", now documented in `CLAUDE.md`.
+- **Two further `lint.sh` checks:** (1) the canonical IMPORTANT subagent block must be *well-formed* — it must now contain both the literal `subagent_type: "Explore"` and `model: "opus"`, not merely the sentinel phrase; (2) a drift guard warns when any SKILL.md or README hardcodes a model version in prose (e.g. `Opus 4.7`), since the `opus` alias already resolves to the latest model.
+
+### Fixed
+
+- **`CLAUDE.md` claimed `lint.sh` "enforces all three [description] matches" — it only enforced two.** The root README skills-table description cell was never compared against the SKILL.md `description`; only the skill-local README line-3 match was checked (and only as a warning). The new root-table parity check makes the claim true (the root-table match is now a hard error), and the wording is corrected to state the per-location severities precisely.
+- **De-versioned the canonical IMPORTANT block and all model-version prose (17 references across 10 `SKILL.md` + 5 `README.md` files).** Following the Opus 4.8 release, every "resolves to Claude Opus 4.7, the most capable model" (and the README variants such as "3 parallel read-only Opus 4.7 agents") hardcoded a now-stale version number. They now read "the latest Claude Opus" / "Opus", so the prose tracks whatever the `opus` alias resolves to and never goes stale on a future Opus release. Frontmatter was already correct (`model: opus` is a live alias); only the prose was wrong.
+
+### Changed
+
+- **`lint.sh` now uses `check-jsonschema` (Python) for frontmatter schema validation and `jq` for the `skills.json` sync check.** Both are optional locally — missing tools produce an uncounted `[note]` and a clean run stays green — and both are present in CI (the `lint` workflow adds `actions/setup-python` + `pip install check-jsonschema==0.37.2`; `jq` is preinstalled on the runner). The pure-bash structural checks are unchanged and the script's bash 3.2 floor is preserved (the cross-skill aggregation uses `sort`/`uniq`/`awk`, not bash 4 associative arrays).
+- **`CLAUDE.md` documents the "opt-in orchestration tier" convention and clarifies the `model` field.** A new Quality-Standards bullet draws the line between the simple default path and `Workflow`-tool orchestration gated behind an explicit `ultra` / `effort: max` opt-in (with `vet` as the reference and `github-ship` as the never-orchestrate reference); the `model` row now notes the `opus` alias resolves to the latest Opus, so skills are de-versioned in prose only.
+- **`enhance` now declares `when_to_use`** — the only fan-out skill that lacked it, closing a catalogue-listing/discovery gap (it remains user-triggered via `disable-model-invocation: true`).
+- **`tools/generate-manifest.sh` warns on stderr when a skill directory has no `SKILL.md`** instead of silently dropping it from `skills.json`.
+
 ## [0.2.6] - 2026-05-28
 
 ### Fixed

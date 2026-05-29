@@ -12,6 +12,18 @@ fi
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILLS_DIR="$REPO_DIR/skills"
 
+# Optional frontmatter schema validation. The SKILL.md frontmatter is checked
+# against schemas/skill-frontmatter.schema.json with check-jsonschema when it is
+# available (always in CI; opt-in locally via `pip install check-jsonschema`).
+# When absent, the per-skill schema check is skipped and a single notice is
+# printed near the top — local linting still works without Python tooling.
+SCHEMA_FILE="$REPO_DIR/schemas/skill-frontmatter.schema.json"
+if command -v check-jsonschema >/dev/null 2>&1 && [[ -f "$SCHEMA_FILE" ]]; then
+    HAVE_JSONSCHEMA=1
+else
+    HAVE_JSONSCHEMA=0
+fi
+
 # Required README section headings, per CLAUDE.md "README Convention".
 # scan_readme_md() iterates this array to populate README_REQUIRED_FOUND[];
 # lint_skill() iterates it again to emit pass/fail messages. Adding a new
@@ -56,6 +68,36 @@ pass() { printf '  %s[pass]%s %s\n' "$GREEN"  "$NC" "$1"; TOTAL_PASS=$((TOTAL_PA
 fail() { printf '  %s[fail]%s %s\n' "$RED"    "$NC" "$1"; TOTAL_FAIL=$((TOTAL_FAIL + 1)); }
 warn() { printf '  %s[warn]%s %s\n' "$YELLOW" "$NC" "$1"; TOTAL_WARN=$((TOTAL_WARN + 1)); }
 
+# Validate a SKILL.md's frontmatter against the JSON Schema with check-jsonschema.
+# Typed validation of every frontmatter field: catches bad enum values
+# (model/effort/shell/context), unknown keys (typos, stale fields — the schema
+# sets additionalProperties:false), malformed allowed-tools, and a missing
+# `agent` when `context: fork`. Complements the field-specific checks in
+# lint_skill(), which emit friendlier messages for the common required-field
+# mistakes. No-op when check-jsonschema is unavailable (announced once at
+# startup) so local linting still works without Python tooling.
+#
+# Extracts the YAML between the first two `---` delimiters into a temp file and
+# forces `--default-filetype yaml` so check-jsonschema parses the fragment as
+# YAML regardless of the temp file's extension. Strips trailing CR so CRLF-saved
+# SKILL.md files validate the same as LF-saved ones. Args: $1 = path to SKILL.md.
+validate_frontmatter_schema() {
+    local skill_md="$1"
+    (( HAVE_JSONSCHEMA )) || return 0
+    local fmfile schema_out schema_rc=0
+    fmfile="$(mktemp "${TMPDIR:-/tmp}/skillfm.XXXXXX")" || { warn "could not create temp file for schema validation"; return 0; }
+    awk 'BEGIN{c=0} {sub(/\r$/,"")} /^---$/{c++; if(c>=2) exit; next} c==1{print}' "$skill_md" > "$fmfile"
+    schema_out="$(check-jsonschema --default-filetype yaml --schemafile "$SCHEMA_FILE" "$fmfile" 2>&1)" || schema_rc=$?
+    rm -f "$fmfile"
+    if (( schema_rc == 0 )); then
+        pass "frontmatter validates against schema"
+    else
+        fail "frontmatter fails schema validation"
+        # Indent the validator's own diagnostics under the [fail] line.
+        printf '%s\n' "$schema_out" | sed 's/^/        /'
+    fi
+}
+
 # Scan SKILL.md in a single pass. Sets globals:
 #   FM_OPENED                                     — frontmatter opening-delimiter seen
 #   FM_NAME, FM_DESC, FM_TOOLS                    — required frontmatter values
@@ -63,6 +105,8 @@ warn() { printf '  %s[warn]%s %s\n' "$YELLOW" "$NC" "$1"; TOTAL_WARN=$((TOTAL_WA
 #   FM_HAS_TAKES_ARG                              — legacy takes-arg field detected (for migration warning)
 #   BODY_HAS_ENTER, BODY_HAS_EXIT                 — EnterPlanMode/ExitPlanMode references
 #   BODY_HAS_EXPLORE, BODY_HAS_IMPORTANT          — Explore subagent + canonical IMPORTANT block
+#   BODY_HAS_HANDOFF                              — canonical "**Skill handoff.**" offer present
+#   BODY_USES_PHASE, BODY_USES_STEP              — "## Phase N" / "## Step N" section style
 #
 # Replaces three get_frontmatter() calls plus four `grep` invocations with a
 # single read pass. Strips trailing CR so Windows-saved (CRLF) SKILL.md files
@@ -78,6 +122,8 @@ scan_skill_md() {
     FM_NAME="" FM_DESC="" FM_TOOLS=""
     FM_ARG_HINT="" FM_HAS_TAKES_ARG=0
     BODY_HAS_ENTER=0 BODY_HAS_EXIT=0 BODY_HAS_EXPLORE=0 BODY_HAS_IMPORTANT=0
+    BODY_HAS_IMPORTANT_EXPLORE=0 BODY_HAS_IMPORTANT_OPUS=0
+    BODY_HAS_HANDOFF=0 BODY_USES_PHASE=0 BODY_USES_STEP=0
     while IFS= read -r line || [[ -n "$line" ]]; do
         lineno=$((lineno + 1))
         [[ $lineno -eq 1 ]] && line="${line#$'\xEF\xBB\xBF'}"
@@ -103,7 +149,14 @@ scan_skill_md() {
             [[ "$line" == *"EnterPlanMode"* ]] && BODY_HAS_ENTER=1
             [[ "$line" == *"ExitPlanMode"*  ]] && BODY_HAS_EXIT=1
             [[ "$line" =~ subagent_type:[[:space:]]*\"?Explore\"? ]] && BODY_HAS_EXPLORE=1
-            [[ "$line" == *"subagents MUST be launched with"* ]] && BODY_HAS_IMPORTANT=1
+            if [[ "$line" == *"subagents MUST be launched with"* ]]; then
+                BODY_HAS_IMPORTANT=1
+                [[ "$line" == *'subagent_type: "Explore"'* ]] && BODY_HAS_IMPORTANT_EXPLORE=1
+                [[ "$line" == *'model: "opus"'* ]] && BODY_HAS_IMPORTANT_OPUS=1
+            fi
+            [[ "$line" == *"**Skill handoff.**"* ]] && BODY_HAS_HANDOFF=1
+            [[ "$line" =~ ^##[[:space:]]+Phase[[:space:]]+[0-9] ]] && BODY_USES_PHASE=1
+            [[ "$line" =~ ^##[[:space:]]+Step[[:space:]]+[0-9]  ]] && BODY_USES_STEP=1
         fi
     done < "$file"
     # Pin return status: the body's trailing `&&` chains can yield non-zero
@@ -119,6 +172,7 @@ scan_skill_md() {
 #   HAS_ALLOWED_TOOLS_ROW                         — Configuration table rows
 #   README_DESC                                   — line 3 (one-line description per template)
 #   README_TOOLS_CELL                             — right-trimmed Allowed tools cell, backticks stripped
+#   README_SAYS_PHASE, README_SAYS_STEP          — "N-phase" / "delivered in N steps" workflow phrasing
 #
 # Same CRLF/BOM/trailing-newline hardening as scan_skill_md. Required-section
 # detection iterates REQUIRED_README_SECTIONS so adding a new required
@@ -133,6 +187,7 @@ scan_readme_md() {
     HAS_USAGE=0 HAS_SAFETY=0 HAS_EXAMPLE=0
     HAS_ARG_HINT_ROW=0 HAS_ALLOWED_TOOLS_ROW=0 HAS_LEGACY_TAKES_ARG_ROW=0
     README_DESC="" README_TOOLS_CELL=""
+    README_SAYS_PHASE=0 README_SAYS_STEP=0
     README_REQUIRED_FOUND=()
     for i in "${!REQUIRED_README_SECTIONS[@]}"; do README_REQUIRED_FOUND[i]=0; done
     while IFS= read -r line || [[ -n "$line" ]]; do
@@ -150,6 +205,12 @@ scan_readme_md() {
             '## Safety'*)   HAS_SAFETY=1 ;;
             '## Example'*)  HAS_EXAMPLE=1 ;;
         esac
+        # Workflow-style phrasing in the "What It Does" prose, per CLAUDE.md README
+        # Convention ("delivered in N steps" for step-numbered skills, "N-phase
+        # analysis" for phase-numbered ones). Used to cross-check the body's
+        # section style. A README that states neither leaves both flags 0.
+        [[ "$line" =~ [0-9]+-phase|[0-9]+[[:space:]]+phases ]] && README_SAYS_PHASE=1
+        [[ "$line" =~ [0-9]+[[:space:]]+steps ]] && README_SAYS_STEP=1
         if [[ "$line" =~ ^\|[[:space:]]*Argument[[:space:]]+hint[[:space:]]*\| ]]; then
             HAS_ARG_HINT_ROW=1
         fi
@@ -242,6 +303,11 @@ lint_skill() {
         pass "Has 'allowed-tools' field"
     fi
 
+    # Comprehensive typed validation of the whole frontmatter (no-op when
+    # check-jsonschema is unavailable). Backstops the field-specific checks above
+    # and validates every optional field the bash scanner does not inspect.
+    validate_frontmatter_schema "$skill_md"
+
     # Argument-hint hygiene: the legacy `takes-arg: true` field is repo-internal
     # and never recognized by Claude Code. Warn (non-blocking) so existing forks
     # keep linting clean while the migration progresses.
@@ -275,8 +341,10 @@ lint_skill() {
     # If multi-agent (Agent in tools and body launches Explore subagents),
     # require the canonical IMPORTANT block.
     if [[ "$FM_TOOLS" == *"Agent"* ]] && (( BODY_HAS_EXPLORE )); then
-        if (( BODY_HAS_IMPORTANT )); then
-            pass "IMPORTANT subagent block present"
+        if (( BODY_HAS_IMPORTANT && BODY_HAS_IMPORTANT_EXPLORE && BODY_HAS_IMPORTANT_OPUS )); then
+            pass "IMPORTANT subagent block present and well-formed"
+        elif (( BODY_HAS_IMPORTANT )); then
+            warn "IMPORTANT block present but missing the literal subagent_type: \"Explore\" and/or model: \"opus\" specifics"
         else
             warn "Agent + Explore subagents used but canonical IMPORTANT block missing"
         fi
@@ -288,6 +356,16 @@ lint_skill() {
         return
     fi
     pass "README.md exists"
+
+    # Drift guard: skill prose must not hardcode a model version (e.g. "Opus 4.7").
+    # The `opus` alias already resolves to the latest model, so de-version the prose
+    # instead — otherwise it goes stale on every Opus/Haiku release. Scoped to this
+    # skill's own files (never CHANGELOG, whose historical entries are intentional).
+    if grep -Eq '(Opus|Haiku) [0-9]+\.[0-9]+' "$skill_md" "$readme_md"; then
+        warn "hardcoded model version in prose (e.g. 'Opus 4.7') — de-version it; the 'opus' alias resolves to the latest model"
+    else
+        pass "no hardcoded model version in prose"
+    fi
 
     # Single-pass README.md scan: populates README_REQUIRED_FOUND[], HAS_USAGE,
     # HAS_SAFETY, HAS_EXAMPLE, HAS_TAKES_ARG_ROW, HAS_ALLOWED_TOOLS_ROW,
@@ -386,10 +464,157 @@ lint_skill() {
             warn "Allowed tools row in README does not match SKILL.md allowed-tools frontmatter"
         fi
     fi
+
+    # Root README skills-table parity: the description cell for this skill in the
+    # root README table must match the SKILL.md description verbatim. CLAUDE.md
+    # documents this as a hard requirement; before this check only the skill-local
+    # README line-3 description was enforced, so the root table could silently drift.
+    # index() does a literal (non-regex) substring search for the table link cell,
+    # so skill names with metacharacters can't corrupt the match.
+    local root_readme="$REPO_DIR/README.md"
+    if [[ -n "$FM_DESC" && -f "$root_readme" ]]; then
+        local root_row_desc
+        root_row_desc="$(awk -F'|' -v n="$skill_name" \
+            'index($0, "["n"](skills/"n"/)"){d=$3; gsub(/^[[:space:]]+|[[:space:]]+$/, "", d); print d; exit}' \
+            "$root_readme")"
+        if [[ -z "$root_row_desc" ]]; then
+            warn "no row found in root README skills table for '$skill_name'"
+        elif [[ "$root_row_desc" == "$FM_DESC" ]]; then
+            pass "root README skills-table description matches SKILL.md"
+        else
+            fail "root README skills-table description differs from SKILL.md description"
+        fi
+    fi
+
+    # Handoff target existence: every skill named in a handoff offer — a
+    # "**Skill handoff.**" line, a "> **Next:**" blockquote, or a github-audit
+    # "suggest \`/x\`" bullet — must resolve to an installed skill directory.
+    # Guards against typo'd handoff targets that would fail silently at runtime.
+    # `tr -d` strips the backtick/slash wrapper from \`/name\` tokens.
+    local handoff_targets bad_handoffs=""
+    handoff_targets="$(grep -hE '\*\*Skill handoff\.\*\*|\*\*Next:\*\*|suggest `/' "$skill_md" 2>/dev/null \
+        | grep -oE '`/[a-z][a-z0-9-]+`' \
+        | tr -d '`/' | sort -u || true)"
+    if [[ -n "$handoff_targets" ]]; then
+        while IFS= read -r t; do
+            [[ -z "$t" ]] && continue
+            [[ -d "$SKILLS_DIR/$t" ]] || bad_handoffs="$bad_handoffs /$t"
+        done <<< "$handoff_targets"
+        if [[ -n "$bad_handoffs" ]]; then
+            warn "handoff references non-existent skill(s):$bad_handoffs"
+        else
+            pass "handoff targets resolve to installed skills"
+        fi
+    fi
+
+    # Skill-tool / handoff coupling: a body that offers a Skill handoff must
+    # declare the Skill tool (otherwise the handoff cannot fire — hard fail), and
+    # a skill that declares Skill should actually use it (warn on a dangling
+    # permission). No tool name other than the Skill tool contains "Skill", so the
+    # substring test is unambiguous.
+    local has_skill_tool=0
+    [[ "$FM_TOOLS" == *"Skill"* ]] && has_skill_tool=1
+    if (( BODY_HAS_HANDOFF )) && (( ! has_skill_tool )); then
+        fail "body offers a Skill handoff but 'Skill' is not in allowed-tools"
+    elif (( BODY_HAS_HANDOFF )) && (( has_skill_tool )); then
+        pass "Skill handoff is backed by the Skill tool"
+    elif (( has_skill_tool )) && (( ! BODY_HAS_HANDOFF )); then
+        warn "'Skill' is in allowed-tools but no Skill handoff is offered in the body"
+    fi
+
+    # Phase/Step terminology consistency: the body's section style (## Phase N vs
+    # ## Step N) must agree with the README's workflow phrasing ("N-phase analysis"
+    # vs "delivered in N steps"). Only a genuine contradiction is flagged — a
+    # README that states neither (a bare numbered list) is left alone.
+    if (( BODY_USES_PHASE )) && (( README_SAYS_STEP )) && (( ! README_SAYS_PHASE )); then
+        warn "body uses '## Phase' headings but README describes the workflow in steps"
+    elif (( BODY_USES_STEP )) && (( README_SAYS_PHASE )) && (( ! README_SAYS_STEP )); then
+        warn "body uses '## Step' headings but README describes the workflow in phases"
+    elif (( BODY_USES_PHASE )) && (( README_SAYS_PHASE )); then
+        pass "Phase terminology consistent between body and README"
+    elif (( BODY_USES_STEP )) && (( README_SAYS_STEP )); then
+        pass "Step terminology consistent between body and README"
+    fi
+}
+
+# Cross-skill invariant: finding-ID prefixes must be unique across skills.
+# Each skill reports findings under a distinct bold-bracket prefix (e.g. **[C1]**,
+# **[R3]**); a prefix claimed by two skills makes report IDs ambiguous when one
+# skill hands off to another. Builds "PREFIX skill" pairs (deduped per skill) and
+# warns (non-blocking) on any prefix used by 2+ skills. awk associative arrays are
+# fine here — that's awk, not bash, so the script's bash-3.2 constraint is unaffected.
+# Repo-wide check: only meaningful across the whole catalogue, so callers gate it
+# to no-argument (all-skills) runs.
+check_finding_id_uniqueness() {
+    printf '\n%sCross-skill checks%s\n' "$BOLD" "$NC"
+    local pairs collisions
+    pairs="$(
+        for d in "$SKILLS_DIR"/*/; do
+            s="${d%/}"; s="${s##*/}"
+            [[ -f "$d/SKILL.md" ]] || continue
+            grep -hoE '\*\*\[[A-Z]+[0-9]+\]\*\*' "$d/SKILL.md" 2>/dev/null \
+                | sed -E 's/.*\[([A-Z]+)[0-9]+\].*/\1/' | sort -u \
+                | sed "s/\$/ $s/" || true
+        done
+    )"
+    collisions="$(printf '%s\n' "$pairs" \
+        | awk 'NF==2{c[$1]++; m[$1]=(m[$1]==""?$2:m[$1]", "$2)} END{for(k in c) if(c[k]>1) print "["k"] used by "m[k]}' \
+        | sort)"
+    if [[ -n "$collisions" ]]; then
+        while IFS= read -r c; do
+            [[ -n "$c" ]] && warn "finding-ID prefix reused across skills: $c"
+        done <<< "$collisions"
+    else
+        pass "finding-ID prefixes are unique across skills"
+    fi
+}
+
+# Cross-skill invariant: the committed skills.json must match a fresh run of
+# tools/generate-manifest.sh — catches a manifest left stale after a frontmatter
+# or handoff change. Skips gracefully (uncounted note) when jq or the generator
+# is unavailable so local linting still works without them; CI has both.
+check_manifest_sync() {
+    local gen="$REPO_DIR/tools/generate-manifest.sh"
+    local committed="$REPO_DIR/skills.json"
+    if ! command -v jq >/dev/null 2>&1; then
+        printf '  %s[note]%s jq not found — skills.json sync check skipped (install jq to enable)\n' "$YELLOW" "$NC"
+        return 0
+    fi
+    if [[ ! -f "$gen" ]]; then
+        printf '  %s[note]%s tools/generate-manifest.sh missing — skills.json sync check skipped\n' "$YELLOW" "$NC"
+        return 0
+    fi
+    if [[ ! -f "$committed" ]]; then
+        fail "skills.json not found — generate it with: bash tools/generate-manifest.sh > skills.json"
+        return 0
+    fi
+    local tmp
+    tmp="$(mktemp "${TMPDIR:-/tmp}/skillsmanifest.XXXXXX")" || { warn "could not create temp file for manifest sync check"; return 0; }
+    if bash "$gen" > "$tmp" 2>/dev/null; then
+        if diff -q "$tmp" "$committed" >/dev/null 2>&1; then
+            pass "skills.json is in sync with skills/"
+        else
+            fail "skills.json is stale — regenerate with: bash tools/generate-manifest.sh > skills.json"
+        fi
+    else
+        fail "tools/generate-manifest.sh failed to run"
+    fi
+    rm -f "$tmp"
 }
 
 printf '%sClaude Skills Linter%s\n' "$BOLD" "$NC"
 printf '====================\n'
+
+# Announce reduced coverage once (uncounted note — does not affect pass/fail/warn
+# totals) when the optional schema validator is unavailable, so a clean local run
+# without Python tooling stays green while signalling that schema checks were skipped.
+if (( ! HAVE_JSONSCHEMA )); then
+    if ! command -v check-jsonschema >/dev/null 2>&1; then
+        printf '  %s[note]%s check-jsonschema not found — frontmatter schema validation skipped (enable: pip install check-jsonschema)\n' "$YELLOW" "$NC"
+    else
+        printf '  %s[note]%s schema file missing at %s — frontmatter schema validation skipped\n' "$YELLOW" "$NC" "$SCHEMA_FILE"
+    fi
+fi
 
 if [[ $# -gt 0 ]]; then
     for skill in "$@"; do
@@ -411,6 +636,13 @@ else
         lint_skill "$skill_name"
     done
     shopt -u nullglob
+fi
+
+# Repo-wide invariants run only on a full (no-argument) lint, not when checking a
+# single named skill — they describe the whole catalogue, not one skill.
+if [[ $# -eq 0 ]]; then
+    check_finding_id_uniqueness
+    check_manifest_sync
 fi
 
 printf '\n%sSummary%s\n' "$BOLD" "$NC"
