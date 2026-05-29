@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-29
+
 ### Added
 
 - **`schemas/skill-frontmatter.schema.json` — a JSON Schema 2020-12 contract for SKILL.md frontmatter.** Encodes the full Claude Code skill spec from `CLAUDE.md` (required + optional fields) as a machine-readable, publishable, `$ref`-able artifact: typed enums (`model`, `effort`, `shell`, `context`), kebab-case `name`, period-terminated `description`, comma-separated `allowed-tools`, and a conditional requiring `agent` when `context: fork`. `additionalProperties: false` rejects unknown keys (typos, stale fields). `lint.sh` validates every skill against it via `check-jsonschema`; CI installs the tool, local runs skip it with a `[note]` if absent.
@@ -255,7 +257,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
 
-[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/thijsvos/Claude_Skills/compare/v0.2.6...v0.3.0
 [0.2.1]: https://github.com/thijsvos/Claude_Skills/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.0...v0.1.1
