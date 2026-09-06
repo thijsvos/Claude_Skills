@@ -7,12 +7,13 @@ Multi-agent root cause analysis that traces errors, correlates with recent chang
 Performs structured root cause analysis through parallel investigation, delivered in 3 steps:
 
 1. **Problem Parsing** -- classifies the input (stack trace, error message, file path, or natural language description) and identifies the error type, affected files, and language/framework context. If no argument is provided, auto-detects recent test or CI failures.
-2. **Parallel Investigation** -- launches 3 parallel agents: Error Trace Analysis (follows the call chain backward to find where behavior diverges from intent), Change Correlation (checks recent git history for commits that could have introduced the bug), and Pattern & Context Analysis (searches for similar issues in the codebase and known issues online)
+2. **Parallel Investigation** -- runs a Workflow of 3 parallel read-only agents: Error Trace Analysis (follows the call chain backward to find where behavior diverges from intent), Change Correlation (checks recent git history for commits that could have introduced the bug), and Pattern & Context Analysis (searches for similar issues in the codebase and known issues online)
 3. **Ranked Diagnosis** -- synthesizes findings into a report with evidence-ranked hypotheses, each with specific file:line references and a concrete code fix. Offers to apply the most likely fix.
 
 ## Requirements
 
 - Claude Code with **Opus model** access
+- The `Workflow` tool (available on paid plans and the API); the skill falls back to the `Agent` tool when it is unavailable or disabled via the `disableWorkflows` setting
 - For change correlation: a git repository with commit history
 - For CI failure detection: `gh` CLI authenticated with the repository
 
@@ -78,13 +79,13 @@ to `return data?.users`, but the dashboard still calls `.map(...)` without guard
 | Setting | Value |
 |---------|-------|
 | Model | `opus` |
-| Effort | `max` |
+| Effort | `xhigh` |
 | Argument hint | `[error \| path \| identifier]` (optional: error message, stack trace, file path, or description) |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Workflow, WebSearch, WebFetch, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 
-- **Read-only investigation**: All analysis agents (Step 2) use the Explore subagent type, which cannot modify files
+- **Read-only investigation**: All analysis agents (Step 2) use the Explore subagent type, which cannot modify files — the Workflow spawns them with `agentType: 'Explore'`, the Agent-tool fallback with `subagent_type: "Explore"`
 - **User approval gate**: No code is modified until you review the diagnosis and explicitly approve a fix
 - **No commits or pushes**: The skill never commits, pushes, or publishes -- it only edits local files when you ask it to apply a fix
 - **Test-first verification**: After applying a fix, the skill suggests running tests rather than assuming the fix is correct

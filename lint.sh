@@ -31,6 +31,11 @@ fi
 # loop both adapt automatically).
 REQUIRED_README_SECTIONS=("What It Does" "Requirements" "Usage" "Configuration")
 
+# Skill-listing budget (characters). description + when_to_use is what Claude
+# Code renders per skill in the session's skill listing; the listing is capped
+# and a longer entry is truncated. Matches the cap documented in CLAUDE.md.
+LISTING_MAX_CHARS=1536
+
 # Colors (disabled if not a terminal or terminal has no color support).
 # Use `tput` so the right escape sequence is picked for the actual terminfo
 # entry instead of hardcoding xterm-only bytes.
@@ -102,9 +107,12 @@ validate_frontmatter_schema() {
 #   FM_OPENED                                     — frontmatter opening-delimiter seen
 #   FM_NAME, FM_DESC, FM_TOOLS                    — required frontmatter values
 #   FM_ARG_HINT                                   — optional argument-hint value
+#   FM_WTU                                        — optional when_to_use value (listing-budget check)
 #   FM_HAS_TAKES_ARG                              — legacy takes-arg field detected (for migration warning)
 #   BODY_HAS_ENTER, BODY_HAS_EXIT                 — EnterPlanMode/ExitPlanMode references
 #   BODY_HAS_EXPLORE, BODY_HAS_IMPORTANT          — Explore subagent + canonical IMPORTANT block
+#   BODY_HAS_WORKFLOW_SCRIPT                      — embedded Workflow script (`export const meta`)
+#   BODY_HAS_WORKFLOW_EXPLORE                     — Workflow agent() call passes agentType: 'Explore'
 #   BODY_HAS_HANDOFF                              — canonical "**Skill handoff.**" offer present
 #   BODY_USES_PHASE, BODY_USES_STEP              — "## Phase N" / "## Step N" section style
 #
@@ -120,9 +128,10 @@ scan_skill_md() {
     local file="$1" line in_fm=0 past_fm=0 lineno=0
     FM_OPENED=0
     FM_NAME="" FM_DESC="" FM_TOOLS=""
-    FM_ARG_HINT="" FM_HAS_TAKES_ARG=0
+    FM_ARG_HINT="" FM_WTU="" FM_HAS_TAKES_ARG=0
     BODY_HAS_ENTER=0 BODY_HAS_EXIT=0 BODY_HAS_EXPLORE=0 BODY_HAS_IMPORTANT=0
     BODY_HAS_IMPORTANT_EXPLORE=0 BODY_HAS_IMPORTANT_OPUS=0
+    BODY_HAS_WORKFLOW_SCRIPT=0 BODY_HAS_WORKFLOW_EXPLORE=0
     BODY_HAS_HANDOFF=0 BODY_USES_PHASE=0 BODY_USES_STEP=0
     while IFS= read -r line || [[ -n "$line" ]]; do
         lineno=$((lineno + 1))
@@ -143,12 +152,22 @@ scan_skill_md() {
             elif [[ "$line" =~ ^description:[[:space:]]*(.*)$   ]]; then FM_DESC="${BASH_REMATCH[1]}"
             elif [[ "$line" =~ ^allowed-tools:[[:space:]]*(.*)$ ]]; then FM_TOOLS="${BASH_REMATCH[1]}"
             elif [[ "$line" =~ ^argument-hint:[[:space:]]*(.*)$ ]]; then FM_ARG_HINT="${BASH_REMATCH[1]}"
+            elif [[ "$line" =~ ^when_to_use:[[:space:]]*(.*)$ ]]; then FM_WTU="${BASH_REMATCH[1]}"
             elif [[ "$line" =~ ^takes-arg:[[:space:]]*(true|false)[[:space:]]*$ ]]; then FM_HAS_TAKES_ARG=1
             fi
         else
             [[ "$line" == *"EnterPlanMode"* ]] && BODY_HAS_ENTER=1
             [[ "$line" == *"ExitPlanMode"*  ]] && BODY_HAS_EXIT=1
+            # Explore subagents are launched either via the Agent tool
+            # (subagent_type: "Explore") or inside a Workflow script
+            # (agentType: 'Explore'); both count as "fans out to Explore".
             [[ "$line" =~ subagent_type:[[:space:]]*\"?Explore\"? ]] && BODY_HAS_EXPLORE=1
+            if [[ "$line" =~ agentType:[[:space:]]*[\'\"]Explore[\'\"] ]]; then
+                BODY_HAS_EXPLORE=1
+                BODY_HAS_WORKFLOW_EXPLORE=1
+            fi
+            # Every Workflow script begins with `export const meta = {...}`.
+            [[ "$line" =~ ^export[[:space:]]+const[[:space:]]+meta ]] && BODY_HAS_WORKFLOW_SCRIPT=1
             if [[ "$line" == *"subagents MUST be launched with"* ]]; then
                 BODY_HAS_IMPORTANT=1
                 [[ "$line" == *'subagent_type: "Explore"'* ]] && BODY_HAS_IMPORTANT_EXPLORE=1
@@ -303,6 +322,18 @@ lint_skill() {
         pass "Has 'allowed-tools' field"
     fi
 
+    # Skill-listing budget: description + when_to_use is what Claude Code renders
+    # in the per-session skill listing, which is budgeted (skillListingBudgetFraction,
+    # per-skill skillListingMaxDescChars). Warn past the documented 1,536-character
+    # cap so a verbose when_to_use doesn't get silently truncated in the listing.
+    # ${#var} counts characters (not bytes) under a UTF-8 locale.
+    local listing_len=$(( ${#FM_DESC} + ${#FM_WTU} ))
+    if (( listing_len > LISTING_MAX_CHARS )); then
+        warn "description + when_to_use is ${listing_len} chars (listing cap ${LISTING_MAX_CHARS}) — trim so the skill listing isn't truncated"
+    else
+        pass "listing text within budget (${listing_len}/${LISTING_MAX_CHARS} chars)"
+    fi
+
     # Comprehensive typed validation of the whole frontmatter (no-op when
     # check-jsonschema is unavailable). Backstops the field-specific checks above
     # and validates every optional field the bash scanner does not inspect.
@@ -338,16 +369,37 @@ lint_skill() {
         fi
     fi
 
-    # If multi-agent (Agent in tools and body launches Explore subagents),
-    # require the canonical IMPORTANT block.
-    if [[ "$FM_TOOLS" == *"Agent"* ]] && (( BODY_HAS_EXPLORE )); then
+    # If multi-agent (Agent or Workflow in tools and body launches Explore
+    # subagents), require the canonical IMPORTANT block.
+    if [[ "$FM_TOOLS" == *"Agent"* || "$FM_TOOLS" == *"Workflow"* ]] && (( BODY_HAS_EXPLORE )); then
         if (( BODY_HAS_IMPORTANT && BODY_HAS_IMPORTANT_EXPLORE && BODY_HAS_IMPORTANT_OPUS )); then
             pass "IMPORTANT subagent block present and well-formed"
         elif (( BODY_HAS_IMPORTANT )); then
             warn "IMPORTANT block present but missing the literal subagent_type: \"Explore\" and/or model: \"opus\" specifics"
         else
-            warn "Agent + Explore subagents used but canonical IMPORTANT block missing"
+            warn "Explore subagents used but canonical IMPORTANT block missing"
         fi
+    fi
+
+    # Workflow-tool / script coupling: a body that embeds a Workflow script
+    # (`export const meta = {...}`) must declare the Workflow tool (otherwise the
+    # call cannot fire — hard fail), and a skill that declares Workflow should
+    # actually embed a script (warn on a dangling permission). When a script is
+    # present, its agent() calls must pass agentType: 'Explore' so the fan-out
+    # keeps the same read-only guarantee as the Agent-tool path.
+    local has_workflow_tool=0
+    [[ "$FM_TOOLS" == *"Workflow"* ]] && has_workflow_tool=1
+    if (( BODY_HAS_WORKFLOW_SCRIPT )) && (( ! has_workflow_tool )); then
+        fail "body embeds a Workflow script but 'Workflow' is not in allowed-tools"
+    elif (( BODY_HAS_WORKFLOW_SCRIPT )) && (( has_workflow_tool )); then
+        pass "Workflow script is backed by the Workflow tool"
+        if (( BODY_HAS_WORKFLOW_EXPLORE )); then
+            pass "Workflow agents are read-only (agentType: 'Explore')"
+        else
+            warn "Workflow script never passes agentType: 'Explore' — its subagents would not be read-only"
+        fi
+    elif (( has_workflow_tool )) && (( ! BODY_HAS_WORKFLOW_SCRIPT )); then
+        warn "'Workflow' is in allowed-tools but the body embeds no Workflow script"
     fi
 
     # Check README.md exists
@@ -602,6 +654,36 @@ check_manifest_sync() {
     rm -f "$tmp"
 }
 
+# Cross-skill invariant: the plugin manifest's version must equal the latest
+# released version in CHANGELOG.md (the first "## [x.y.z]" heading, skipping
+# [Unreleased]). release.yml refuses a tag that doesn't match the manifest, so
+# a stale manifest would otherwise surface only at release time. Requires jq;
+# skips with an uncounted note when it (or the manifest) is absent.
+check_plugin_manifest_version() {
+    local manifest="$REPO_DIR/.claude-plugin/plugin.json"
+    local changelog="$REPO_DIR/CHANGELOG.md"
+    if [[ ! -f "$manifest" ]]; then
+        printf '  %s[note]%s .claude-plugin/plugin.json missing — manifest version check skipped\n' "$YELLOW" "$NC"
+        return 0
+    fi
+    if ! command -v jq >/dev/null 2>&1; then
+        printf '  %s[note]%s jq not found — plugin manifest version check skipped\n' "$YELLOW" "$NC"
+        return 0
+    fi
+    local manifest_ver changelog_ver
+    manifest_ver="$(jq -r '.version // ""' "$manifest" 2>/dev/null || true)"
+    changelog_ver="$(sed -nE 's/^## \[([0-9]+\.[0-9]+\.[0-9]+[^]]*)\].*/\1/p' "$changelog" | head -1)"
+    if [[ -z "$manifest_ver" ]]; then
+        fail "plugin.json has no version — set it to the latest released version (${changelog_ver:-unknown})"
+    elif [[ -z "$changelog_ver" ]]; then
+        warn "could not find a released version heading in CHANGELOG.md to compare plugin.json version ($manifest_ver) against"
+    elif [[ "$manifest_ver" == "$changelog_ver" ]]; then
+        pass "plugin.json version ($manifest_ver) matches latest CHANGELOG release"
+    else
+        fail "plugin.json version ($manifest_ver) differs from latest CHANGELOG release ($changelog_ver) — bump it with the release"
+    fi
+}
+
 printf '%sClaude Skills Linter%s\n' "$BOLD" "$NC"
 printf '====================\n'
 
@@ -643,6 +725,7 @@ fi
 if [[ $# -eq 0 ]]; then
     check_finding_id_uniqueness
     check_manifest_sync
+    check_plugin_manifest_version
 fi
 
 printf '\n%sSummary%s\n' "$BOLD" "$NC"

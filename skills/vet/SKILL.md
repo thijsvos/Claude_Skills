@@ -4,7 +4,7 @@ description: Structured code review across correctness, security, performance, a
 when_to_use: Use when the user asks for a review of pending changes, wants a verdict on a diff, asks "is this ready to merge", or names a file/branch/commit-range to review.
 allowed-tools: Read, Grep, Glob, Bash, Agent, Workflow, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
 model: opus
-effort: max
+effort: xhigh
 argument-hint: "[ultra] [path | identifier | ref | range]"
 ---
 
@@ -14,7 +14,7 @@ You are performing a comprehensive, structured code review. Analyze code changes
 
 **ARGUMENTS:** The user may provide an optional scope argument — a file path, directory, branch name, or commit range. If no argument is provided, auto-detect the scope.
 
-**Ultra mode.** If the first argument token is `ultra` (e.g. `/vet ultra`, `/vet ultra src/auth/`), enable **Ultra mode** — a deeper, multi-agent review orchestrated with the `Workflow` tool — and treat the *remaining* tokens as the scope argument. Without `ultra`, run the default review (Step 2's three-agent fan-out). See the **Ultra mode: Orchestrated Deep Review** section for how the two modes diverge.
+**Ultra mode.** If the first argument token is `ultra` (e.g. `/vet ultra`, `/vet ultra src/auth/`), enable **Ultra mode** — a deeper review that adds an adversarial verification stage to the Workflow — and treat the *remaining* tokens as the scope argument. Without `ultra`, run the default review (Step 2's three-agent Workflow). See the **Ultra mode: Orchestrated Deep Review** section for how the two modes diverge.
 
 **IMPORTANT:** Always quote the user-supplied argument in double quotes when passing it to shell commands.
 
@@ -92,27 +92,73 @@ State the detected scope clearly before proceeding to Step 2.
 ## Step 2: Multi-Dimensional Review
 
 **Mode selection:**
-- **Default** (no `ultra` argument) — run the three-agent fan-out described in this step. Fast and lightweight; the right call for everyday reviews.
-- **Ultra** (`/vet ultra …`) — skip the fan-out below and instead run the orchestrated deep review in the **Ultra mode: Orchestrated Deep Review** section, then continue to Step 3 with the confirmed findings. Use it when correctness matters more than latency: security-sensitive diffs, large changesets, or "leave no stone unturned" reviews.
+- **Default** (no `ultra` argument) — run the three-agent Workflow described in this step. Fast and lightweight; the right call for everyday reviews.
+- **Ultra** (`/vet ultra …`) — run the same Workflow with the extra adversarial-verify stage from the **Ultra mode: Orchestrated Deep Review** section, then continue to Step 3 with the confirmed findings. Use it when correctness matters more than latency: security-sensitive diffs, large changesets, or "leave no stone unturned" reviews.
 
-Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: "opus"`).
+Run the review as a **`Workflow` of exactly 3 read-only Explore agents in parallel** — one per dimension below. Call the `Workflow` tool with a script along these lines, substituting the scope and convention context resolved in Step 1 and each agent's brief verbatim from its `### Agent N` section:
+
+```js
+export const meta = {
+  name: 'vet-review',
+  description: 'Three-lens code review: correctness, security & performance, conventions',
+  phases: [{ title: 'Review' }],
+}
+
+const SCOPE = `<the diff / changed files / exact git commands resolved in Step 1>`
+const CONTEXT = `<the project convention context gathered in Step 1>`
+
+// Mirrors the structured format below — the harness validates each agent's return against it.
+const FINDINGS = {
+  type: 'object', additionalProperties: false,
+  properties: {
+    findings: { type: 'array', items: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        severity: { type: 'string', enum: ['critical', 'warning', 'suggestion'] },
+        file: { type: 'string' }, line: { type: 'string' },
+        title: { type: 'string', maxLength: 80 },
+        description: { type: 'string' }, fix: { type: 'string' },
+      },
+      required: ['severity', 'file', 'line', 'title', 'description', 'fix'],
+    } },
+    looks_good: { type: 'array', minItems: 1, maxItems: 2, items: { type: 'string' } },
+  },
+  required: ['findings', 'looks_good'],
+}
+
+const DIMENSIONS = [
+  { key: 'correctness',   brief: `<Agent 1 brief, verbatim>` },
+  { key: 'security-perf', brief: `<Agent 2 brief, verbatim>` },
+  { key: 'conventions',   brief: `<Agent 3 brief, verbatim>` },
+]
+
+const reports = await parallel(DIMENSIONS.map(d => () =>
+  agent(`Review the following change set through the ${d.key} lens. Read the FULL files being changed, not just the diff hunks.\nSCOPE:\n${SCOPE}\nCONVENTIONS:\n${CONTEXT}\n\n${d.brief}`,
+    { label: `review:${d.key}`, phase: 'Review', agentType: 'Explore', schema: FINDINGS })))
+
+return { dimensions: DIMENSIONS.map((d, i) => ({ key: d.key, report: reports[i] })) }
+```
+
+Wait for the Workflow's completion notification before continuing — never synthesize from partial results. Each `report` is a validated `{ findings, looks_good }` object; a `null` report means that agent was skipped or failed — say so in the report header rather than silently dropping the dimension.
+
+**Fallback.** If the `Workflow` tool is not available in this session, launch the same three briefs as **3 Explore subagents in parallel** via the `Agent` tool (`subagent_type: "Explore"`, `model: "opus"`).
 
 Provide each agent with:
 - The diff content or the exact git commands to obtain it from Step 1
 - The list of changed files
 - Any project convention context gathered in Step 1
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `agentType: 'Explore'` inside the `Workflow` script (omit `model` — each agent inherits the session model), or, on the `Agent`-tool fallback, with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The explicit `model: "opus"` on the `Agent` path pins the fan-out to the latest Opus even when a cheaper default subagent model is configured, so the analysis never silently runs on a smaller model. Never use general-purpose subagents in this skill.
 
 **IMPORTANT:** Instruct each agent to read the **full files** being changed (not just the diff hunks) so they understand the surrounding context, module purpose, and how the changes integrate with existing code.
 
 **Effort gate.** Adapt the file-reading depth to the active effort level via `${CLAUDE_EFFORT}`:
 - `max` / `xhigh` / `high` — read full files for every changed module (default; current behavior).
-- `medium` / `low` / `min` — read the changed hunks plus the immediate surrounding ~50 lines of context, not the full files. The review report header should note this as `read scope: hunks+context (effort=${CLAUDE_EFFORT})` so the user knows the depth was reduced.
+- `medium` / `low` — read the changed hunks plus the immediate surrounding ~50 lines of context, not the full files. The review report header should note this as `read scope: hunks+context (effort=${CLAUDE_EFFORT})` so the user knows the depth was reduced.
 
 This avoids the "max-effort review for a one-line typo fix" wall-clock penalty without compromising deep reviews when the user asked for them.
 
-Each agent must return findings in this structured format:
+Each agent must return findings in this structured format (the `FINDINGS` schema above enforces it on the Workflow path; on the Agent-tool fallback, include the list in each prompt):
 - **Severity**: Critical / Warning / Suggestion
 - **File**: exact file path and line number
 - **Title**: short description (under 80 characters)
@@ -192,9 +238,9 @@ Review the changes for project consistency, test coverage, and documentation:
 
 ## Ultra mode: Orchestrated Deep Review (opt-in)
 
-Run this **only** when Ultra mode is active (the user invoked `/vet ultra …`). It replaces Step 2's single-round fan-out with a `Workflow`-tool orchestration that finds, **adversarially verifies**, and de-duplicates findings before you synthesize — trading latency and tokens for materially higher precision (fewer false positives). This is an explicit opt-in tier (see CLAUDE.md → *Opt-in orchestration tier*); never run it for a plain `/vet`.
+Run this **only** when Ultra mode is active (the user invoked `/vet ultra …`). It extends Step 2's three-agent Workflow with a stage that **adversarially verifies** every finding before you synthesize — trading latency and tokens for materially higher precision (fewer false positives). This is an explicit opt-in tier (see CLAUDE.md → *Opt-in orchestration tier*); never run it for a plain `/vet`, because the verify stage spawns three extra skeptics per finding.
 
-Call the `Workflow` tool with a script along these lines, substituting the scope and convention context resolved in Step 1:
+Call the `Workflow` tool with a script along these lines. It reuses Step 2's `SCOPE`, `CONTEXT`, `FINDINGS`, and `DIMENSIONS` (same three briefs, same validated shape) and adds a verify stage that votes on each finding programmatically:
 
 ```js
 export const meta = {
@@ -203,25 +249,11 @@ export const meta = {
   phases: [{ title: 'Find' }, { title: 'Verify' }],
 }
 
-const SCOPE = `<the diff / files / git commands resolved in Step 1>`
-const CONTEXT = `<the project convention context gathered in Step 1>`
+const SCOPE = `<same as Step 2>`
+const CONTEXT = `<same as Step 2>`
+const FINDINGS = { /* same schema as Step 2 */ }
+const DIMENSIONS = [ /* same three { key, brief } entries as Step 2 */ ]
 
-const FINDINGS = {
-  type: 'object', additionalProperties: false,
-  properties: {
-    dimension: { type: 'string' },
-    findings: { type: 'array', items: {
-      type: 'object', additionalProperties: false,
-      properties: {
-        severity: { type: 'string', enum: ['critical', 'warning', 'suggestion'] },
-        file: { type: 'string' }, line: { type: 'string' },
-        title: { type: 'string' }, detail: { type: 'string' }, fix: { type: 'string' },
-      },
-      required: ['severity', 'file', 'line', 'title', 'detail', 'fix'],
-    } },
-  },
-  required: ['dimension', 'findings'],
-}
 const VERDICT = {
   type: 'object', additionalProperties: false,
   properties: {
@@ -232,36 +264,32 @@ const VERDICT = {
   required: ['real', 'confidence', 'reason'],
 }
 
-const DIMENSIONS = [
-  { key: 'correctness', prompt: 'Review for correctness/logic: edge cases, null/undefined, races, error paths, API contracts, resource cleanup.' },
-  { key: 'security-perf', prompt: 'Review for security (injection, secrets, authz, crypto, SSRF, input validation) and performance (N+1, complexity, allocations, leaks, unbounded growth).' },
-  { key: 'conventions', prompt: 'Review for project conventions, test-coverage gaps, and documentation drift.' },
-]
-
 // Find -> adversarially verify each finding, per dimension, pipelined (no barrier):
 // a dimension's findings start verifying as soon as that dimension returns.
 const results = await pipeline(
   DIMENSIONS,
   d => agent(
-    `Review the following change set through the ${d.key} lens. Read the FULL files, not just hunks.\nSCOPE:\n${SCOPE}\nCONVENTIONS:\n${CONTEXT}\n\n${d.prompt}`,
+    `Review the following change set through the ${d.key} lens. Read the FULL files, not just hunks.\nSCOPE:\n${SCOPE}\nCONVENTIONS:\n${CONTEXT}\n\n${d.brief}`,
     { label: `find:${d.key}`, phase: 'Find', schema: FINDINGS, agentType: 'Explore' }),
   found => parallel((found?.findings || []).map(f => () =>
     parallel([0, 1, 2].map(i => () =>
       agent(
-        `Adversarially verify this review finding against the actual code. Try to REFUTE it; default to real=false if uncertain.\nSCOPE:\n${SCOPE}\nFINDING: ${f.severity.toUpperCase()} ${f.file}:${f.line} — ${f.title}\n${f.detail}`,
+        `Adversarially verify this review finding against the actual code. Try to REFUTE it; default to real=false if uncertain.\nSCOPE:\n${SCOPE}\nFINDING: ${f.severity.toUpperCase()} ${f.file}:${f.line} — ${f.title}\n${f.description}`,
         { label: `verify:${f.file}:${f.line}#${i}`, phase: 'Verify', schema: VERDICT, agentType: 'Explore' })))
       .then(votes => ({ finding: f, real: votes.filter(Boolean).filter(v => v.real).length >= 2 }))))
+    .then(verified => ({ looks_good: found?.looks_good || [], verified }))   // carry the finder's callouts through
 )
 
-const confirmed = results.flat().filter(Boolean).filter(v => v.real).map(v => v.finding)
-return { confirmed }
+const confirmed = results.filter(Boolean).flatMap(r => r.verified).filter(Boolean).filter(v => v.real).map(v => v.finding)
+const looks_good = results.filter(Boolean).flatMap(r => r.looks_good)
+return { confirmed, looks_good }
 ```
 
 Notes:
-- **Model:** omit `model` on `agent()` — it inherits the session model, so under Opus (and ultracode) every subagent is the latest Opus automatically. `agentType: 'Explore'` keeps them **read-only** (Edit/Write denied), the same safety guarantee as the default fan-out.
+- **Model:** omit `model` on `agent()` — it inherits the session model, so under Opus (and ultracode) every subagent is the latest Opus automatically. `agentType: 'Explore'` keeps them **read-only** (Edit/Write denied), the same safety guarantee as the default Workflow.
 - **Why a pipeline, not a barrier:** each dimension's findings begin verifying the moment that dimension returns — the security lens doesn't wait on the conventions lens.
-- **Three skeptics per finding:** a finding survives only if ≥2 of 3 independent verifiers fail to refute it. This is what buys the precision gain over the default single-pass fan-out.
-- After the Workflow returns `confirmed`, continue to **Step 3** and render the standard report from those findings. Add `mode: ultra (adversarially verified)` to the report header so the user knows the deep tier ran.
+- **Three skeptics per finding:** a finding survives only if ≥2 of 3 independent verifiers fail to refute it. This is what buys the precision gain over the default single-pass Workflow.
+- After the Workflow returns `confirmed` and `looks_good`, continue to **Step 3** and render the standard report from them. Add `mode: ultra (adversarially verified)` to the report header so the user knows the deep tier ran.
 
 ---
 

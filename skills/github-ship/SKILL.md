@@ -4,7 +4,23 @@ description: Turns local changes into a GitHub issue and linked PR, or cleans up
 when_to_use: Use when the user wants to ship pending changes as a GitHub issue + PR pair, or wants to clean up a feature branch after the PR has been merged on GitHub. Auto-detects create vs cleanup mode.
 allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
-effort: max
+effort: xhigh
+# Hard guard for the two things this skill's prose forbids: bypassing commit hooks
+# and rewriting remote history. Fires on every Bash call for the rest of the
+# session (skill hooks are session-scoped). Inline shell on purpose —
+# ${CLAUDE_SKILL_DIR} is not expanded in hook commands. Exit 2 blocks the call.
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: |
+            input=$(cat)
+            if printf '%s' "$input" | grep -qE -- '--no-verify|git push[^;&|]*(--force|-f( |"|\\|$))'; then
+              echo 'Blocked by the /github-ship guard: --no-verify and force-push are never allowed. Fix the failing hook or open a new PR instead.' >&2
+              exit 2
+            fi
+            exit 0
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.

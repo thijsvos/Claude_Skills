@@ -75,8 +75,12 @@ for d in "$SKILLS_DIR"/*/; do
     # disable-model-invocation: boolean (default false when absent).
     if [[ "$(fm_field disable-model-invocation "$smd")" == "true" ]]; then dmi=true; else dmi=false; fi
 
-    # uses_subagents: does the body launch Explore subagents?
-    if grep -qE 'subagent_type:[[:space:]]*"?Explore"?' "$smd"; then subagents=true; else subagents=false; fi
+    # uses_subagents: does the body launch Explore subagents — via the Agent tool
+    # (subagent_type: "Explore") or inside a Workflow script (agentType: 'Explore')?
+    if grep -qE 'subagent_type:[[:space:]]*"?Explore"?|agentType:[[:space:]]*['"'"'"]Explore['"'"'"]' "$smd"; then subagents=true; else subagents=false; fi
+
+    # uses_workflow: does the body embed a Workflow script (`export const meta = {...}`)?
+    if grep -qE '^export[[:space:]]+const[[:space:]]+meta' "$smd"; then workflow=true; else workflow=false; fi
 
     # handoffs: skills named in a handoff offer (same patterns lint.sh validates).
     handoffs_json="$(grep -hE '\*\*Skill handoff\.\*\*|\*\*Next:\*\*|suggest `/' "$smd" 2>/dev/null \
@@ -100,6 +104,7 @@ for d in "$SKILLS_DIR"/*/; do
         --arg when_to_use "$wtu" \
         --argjson disable_model_invocation "$dmi" \
         --argjson uses_subagents "$subagents" \
+        --argjson uses_workflow "$workflow" \
         --argjson handoffs "$handoffs_json" \
         --argjson finding_id_prefixes "$prefixes_json" \
         '{
@@ -112,6 +117,7 @@ for d in "$SKILLS_DIR"/*/; do
             when_to_use: $when_to_use,
             disable_model_invocation: $disable_model_invocation,
             uses_subagents: $uses_subagents,
+            uses_workflow: $uses_workflow,
             handoffs: $handoffs,
             finding_id_prefixes: $finding_id_prefixes
         }

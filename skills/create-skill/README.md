@@ -7,7 +7,7 @@ Interactive skill generator that scaffolds new skills following all project conv
 Guides you through creating a new Claude Code skill from scratch, delivered in 4 steps:
 
 1. **Gather Requirements** -- parses a description of the desired skill or asks clarifying questions: name, argument handling, capabilities (read-only vs file modification vs web access), analysis dimensions, and output format
-2. **Design the Skill** -- reads existing skills for structural inspiration, then designs the complete skill following every documented and undocumented convention: tool selection, subagent configuration (the latest Opus, Explore read-only agents), argument resolution cascade, finding IDs, report format, plan mode flow, and action offer
+2. **Design the Skill** -- reads existing skills for structural inspiration, then designs the complete skill following every documented and undocumented convention: tool selection, subagent configuration (a Workflow of 3 read-only Explore agents, Agent-tool fallback), argument resolution cascade, finding IDs, report format, plan mode flow, and action offer
 3. **Present the Plan** -- shows the full SKILL.md and README.md content for review before any files are created
 4. **Generate, Validate, Install** -- creates the skill directory and files, updates the root README and CHANGELOG, runs the linter to validate, and installs the symlink
 
@@ -41,7 +41,7 @@ Scaffolding a new "C# security audit" skill from scratch:
 [Step 1] Gathering requirements via batched AskUserQuestion …
   ✓ Argument behavior: Optional argument
   ✓ Capabilities: Modify existing files, Internet access
-  ✓ Subagent fan-out: 3 Explore subagents — three orthogonal analysis lenses
+  ✓ Subagent fan-out: 3-agent Workflow — three orthogonal analysis lenses
 
 [Step 2] Designed skill: name=csharp-security, prefix=[S1], 3 lenses
         (OWASP / .NET-specific weaknesses / build config)
@@ -72,9 +72,9 @@ Scaffolding a new "C# security audit" skill from scratch:
 | Setting | Value |
 |---------|-------|
 | Model | `opus` |
-| Effort | `max` |
+| Effort | `xhigh` |
 | Argument hint | `[skill description]` (optional: description of the skill to create) |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Workflow, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 

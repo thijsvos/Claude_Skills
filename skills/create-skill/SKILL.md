@@ -2,9 +2,9 @@
 name: create-skill
 description: Interactive skill generator that scaffolds new skills following all project conventions, serving as the definitive reference for skill creation.
 when_to_use: Use when the user wants to create a new Claude Code skill, asks how to package a workflow as a skill, or describes a repeatable procedure they want callable as `/something`.
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Workflow, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
-effort: max
+effort: xhigh
 argument-hint: "[skill description]"
 ---
 
@@ -43,7 +43,7 @@ Every `SKILL.md` must begin with YAML frontmatter between `---` delimiters.
 | Field | Value | Note |
 |-------|-------|------|
 | `model` | `opus` | Resolves to the latest Claude Opus, the most capable model |
-| `effort` | `max` | Maximum reasoning depth |
+| `effort` | `xhigh` | Deep reasoning without `max`'s latency and token cost. `max` is reserved for the user's own session setting (or an `ultra` tier) — never the skill default |
 
 **Optional fields:**
 
@@ -57,6 +57,12 @@ Every `SKILL.md` must begin with YAML frontmatter between `---` delimiters.
 | `user-invocable` | `true` | Set `false` to hide the skill from the `/` menu (background-knowledge skills only Claude should invoke). The inverse of `disable-model-invocation`. |
 | `context` | (none) | Set to `fork` to run the skill in a forked subagent context. The skill body becomes the subagent's prompt. |
 | `agent` | `general-purpose` | When `context: fork` is set, picks the subagent type (`Explore`, `Plan`, `general-purpose`, or any custom agent in `.claude/agents/`). |
+| `background` | `true` | With `context: fork`, set `false` to wait for the fork's result inline (Claude Code 2.1.218+). |
+| `disallowed-tools` | (none) | Tools removed from the pool while the skill is active. Prefer a tight `allowed-tools` list; reach for this only when a skill must guarantee a tool is absent (e.g. `Write` in a report-only skill). |
+| `hooks` | (none) | Skill-scoped hooks in `settings.json` shape as YAML. They persist for the rest of the session (unless `once: true`), and `${CLAUDE_SKILL_DIR}` is not expanded in hook commands — write the command inline. Use for hard guards the prose alone can't enforce: `github-ship` and `idiom-check` block `--no-verify` and force-pushes with a `PreToolUse` hook on `Bash`. |
+| `metadata`, `license`, `compatibility` | (none) | Informational only (`metadata` is a free-form map Claude Code ignores; `compatibility` ≤ 500 chars). Set `compatibility` when the skill needs a CLI such as `gh`. |
+
+The `model` aliases are `opus`, `sonnet`, `haiku`, `fable`, `inherit`; the schema rejects full model IDs so nothing in the repo hardcodes a version. Body substitutions: `$ARGUMENTS`, `$0`/`$1` (or `$ARGUMENTS[N]`), `$<name>`, `\$` to escape a literal dollar, `${CLAUDE_SESSION_ID}`, `${CLAUDE_EFFORT}`, `${CLAUDE_SKILL_DIR}`, `${CLAUDE_PROJECT_DIR}`, and `` !`<command>` `` dynamic context injection (see `CLAUDE.md`).
 
 ---
 
@@ -69,13 +75,13 @@ Follow the **minimal permissions principle** — only request tools the skill ac
 Read, Grep, Glob, Bash, EnterPlanMode, ExitPlanMode
 ```
 
-Add `Agent` only if the skill genuinely fans out to subagents (see R4 — default is NO subagents).
+Add `Agent, Workflow` only if the skill genuinely fans out to subagents (see R4 — default is NO subagents). They travel together: `Workflow` runs the default 3-agent orchestration, `Agent` backs the fallback when the Workflow tool is unavailable.
 
 **Add based on capability:**
 
 | Capability needed | Add these tools |
 |-------------------|----------------|
-| Launch parallel analysis subagents | `Agent` (only if R4's decision gate passes) |
+| Launch the 3-lens parallel analysis | `Agent, Workflow` (only if R4's decision gate passes) |
 | Modify existing files | `Edit` |
 | Create new files | `Write` |
 | Internet access (web search, API lookups) | `WebSearch, WebFetch` |
@@ -127,7 +133,7 @@ The body follows this order after the frontmatter:
 | Step | Purpose | Pattern |
 |------|---------|---------|
 | Step 1 | **Resolve scope** | Parse argument via resolution cascade, auto-detect from git, gather project context |
-| Step 2 | **Parallel analysis** | Launch 3 Explore subagents, each covering a distinct dimension |
+| Step 2 | **Parallel analysis** | Run a `Workflow` of exactly 3 Explore agents, each covering a distinct dimension |
 | Step 3 | **Synthesize report** | Deduplicate, prioritize, format structured report. Call `ExitPlanMode`, ask action question |
 | Step 4 | **Execute** | Apply changes after user approval, verify results |
 
@@ -147,30 +153,62 @@ If you can't name three independent lenses that genuinely benefit from parallel 
 
 If the answer is yes — three genuinely orthogonal lenses (e.g., `vet`'s correctness / security / performance / conventions split, or `refactor`'s correctness-security / performance / structure split) — then proceed with the rest of this rule.
 
-**Configuration (mandatory when using subagents):**
+**Orchestration (mandatory when using subagents):** the default fan-out is a **`Workflow` of exactly 3 read-only Explore agents in parallel**, with the `Agent` tool as the fallback when the Workflow tool is unavailable. Declare both `Agent` and `Workflow` in `allowed-tools`. A skill body instructing the call *is* the documented opt-in the Workflow tool requires, so no `ultra` argument is needed for this default tier — but keep it to exactly three agents and a single round; anything heavier (verify panels, loop-until-dry, worktrees) belongs behind an explicit `ultra` tier (see CLAUDE.md → *Opt-in orchestration tier*).
+
+Configuration on each path:
 ```
-subagent_type: "Explore"
-model: "opus"
+Workflow script:   agent(prompt, { agentType: 'Explore' })     // omit model — inherits the session model
+Agent-tool fallback: subagent_type: "Explore", model: "opus"
 ```
 
-- `"Explore"` agents are **read-only** — Edit and Write are denied at the agent level. This is the safety mechanism that prevents analysis agents from modifying the project.
-- `model: "opus"` overrides the Explore agent's default (Haiku) to use **the latest Opus**, the most capable model, ensuring thorough deep analysis.
-- **Never** use `subagent_type: "general-purpose"` during analysis phases.
+- `Explore` agents are **read-only** — Edit and Write are denied at the agent level. This is the safety mechanism that prevents analysis agents from modifying the project, on both paths.
+- Inside the Workflow script, **omit `model`** — each agent inherits the session model (Explore is capped at Opus on the Claude API), so an Opus session gets Opus agents automatically.
+- On the `Agent`-tool fallback, `model: "opus"` pins the fan-out to **the latest Opus** even when a cheaper default subagent model is configured.
+- **Never** use `general-purpose` agents during analysis phases.
 
 **Required IMPORTANT block** (include verbatim in the analysis step):
 ```
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `agentType: 'Explore'` inside the `Workflow` script (omit `model` — each agent inherits the session model), or, on the `Agent`-tool fallback, with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The explicit `model: "opus"` on the `Agent` path pins the fan-out to the latest Opus even when a cheaper default subagent model is configured, so the analysis never silently runs on a smaller model. Never use general-purpose subagents in this skill.
 ```
 
-**Launch boilerplate:**
+**Launch boilerplate** (the script keeps each `### Agent N` section as the single source of truth for its brief — never duplicate the checklists inside the script):
+````
+Run the analysis as a **`Workflow` of exactly 3 read-only Explore agents in parallel** — one per lens below. Call the `Workflow` tool with a script along these lines, substituting the context resolved in Step 1 and each agent's brief verbatim from its `### Agent N` section:
+
+```js
+export const meta = {
+  name: '<skill-name>-analysis',
+  description: 'Three-lens <domain> analysis: <lens 1>, <lens 2>, <lens 3>',
+  phases: [{ title: 'Analyze' }],
+}
+
+const CONTEXT = `<the context items resolved in Step 1>`
+const FORMAT = `<the "Each agent must return findings in this structured format" list below, plus the Looks Good requirement>`
+
+const LENSES = [
+  { key: '<lens-1-slug>', brief: `<Agent 1 brief, verbatim>` },
+  { key: '<lens-2-slug>', brief: `<Agent 2 brief, verbatim>` },
+  { key: '<lens-3-slug>', brief: `<Agent 3 brief, verbatim>` },
+]
+
+const reports = await parallel(LENSES.map(l => () =>
+  agent(`Analyze the target through the ${l.key} lens. Read the FULL target files, not just snippets.\n${CONTEXT}\n\n${l.brief}\n\n${FORMAT}`,
+    { label: `analyze:${l.key}`, phase: 'Analyze', agentType: 'Explore' })))
+
+return { lenses: LENSES.map((l, i) => ({ key: l.key, report: reports[i] })) }
 ```
-Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: "opus"`).
+
+Wait for the Workflow's completion notification before continuing — never synthesize from partial results. A `null` report means that agent was skipped or failed; say so in the report header rather than silently dropping the lens.
+
+**Fallback.** If the `Workflow` tool is not available in this session, launch the same three briefs as **3 Explore subagents in parallel** via the `Agent` tool (`subagent_type: "Explore"`, `model: "opus"`).
 
 Provide each agent with:
 - <context item 1>
 - <context item 2>
 - <context item 3>
-```
+````
+
+Notes on the script: `parallel()` is correct here (not `pipeline()`) because the synthesis step needs all three reports together to deduplicate across lenses. When the finding shape is regular (a fixed set of fields per finding plus "Looks Good" callouts), replace `FORMAT` with a `FINDINGS` JSON Schema that mirrors the structured-format list and pass `schema: FINDINGS` on each `agent()` call — the harness then validates every return (`vet`, `refactor`, `docstring-check`, `idiom-check` are the references; copy `vet`'s `FINDINGS` object and rename the fields). Keep `FORMAT` (text return) only for heterogeneous digests such as `enhance`'s reconnaissance. `lint.sh` fails a body that embeds a script without declaring `Workflow`, and warns if the script never passes `agentType: 'Explore'`.
 
 **Agent naming:** Use `### Agent N: <Title>` as subheadings under the analysis step.
 
@@ -335,7 +373,7 @@ The **Safety** section uses this pattern:
 ```
 
 Common safety bullets:
-- **Read-only analysis**: All analysis agents use the Explore subagent type, which cannot modify files
+- **Read-only analysis**: All analysis agents use the Explore subagent type, which cannot modify files — the Workflow spawns them with `agentType: 'Explore'`, the Agent-tool fallback with `subagent_type: "Explore"`
 - **User approval gate**: No code is modified until the user reviews and approves
 - **No commits or pushes**: The skill never commits, pushes, or publishes
 
@@ -361,7 +399,7 @@ After creating a new skill, these project files must also be updated:
 
 - **Root `README.md`** — add a row to the skills table:
   ```
-  | [<name>](skills/<name>/) | <description> | Opus | Max |
+  | [<name>](skills/<name>/) | <description> | Opus | xhigh |
   ```
   And add a usage example in the Quick Start section.
 
@@ -402,7 +440,7 @@ Then collect the structured requirements. **Issue a single `AskUserQuestion` cal
 
 3. **Subagent fan-out** — single-select (per R4's decision gate), options:
    - `No subagents — single linear flow` (default; mirrors `github-ship`)
-   - `3 Explore subagents — three orthogonal analysis lenses` (mirrors `vet`, `refactor`)
+   - `3-agent Workflow — three orthogonal analysis lenses` (read-only Explore agents, Agent-tool fallback; mirrors `vet`, `refactor`)
 
 For the freeform requirements that don't fit multiple-choice (skill name, workflow design, output format, finding-ID letter), follow up with plain-text questions or batch them into a second `AskUserQuestion` call if structured options are appropriate. Specifically still gather:
 
@@ -424,7 +462,7 @@ Based on the requirements from Step 1, design the complete skill. Read 1-2 exist
 
 2. **Argument resolution** — which steps from the R9 cascade are relevant? Design the resolution logic.
 
-3. **Subagent structure** — apply R4's decision gate first. **If the skill does not have three orthogonal analysis lenses, skip subagents entirely** and design a single linear workflow. Only if the decision gate passes (yes, three independent dimensions), design the 3 analysis agents:
+3. **Subagent structure** — apply R4's decision gate first. **If the skill does not have three orthogonal analysis lenses, skip subagents entirely** and design a single linear workflow. Only if the decision gate passes (yes, three independent dimensions), design the 3 analysis agents that the Workflow script will run:
    - What dimension does each agent cover?
    - What specific checklist items does each agent evaluate?
    - What structured format does each agent return?

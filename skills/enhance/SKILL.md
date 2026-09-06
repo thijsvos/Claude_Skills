@@ -3,9 +3,9 @@ name: enhance
 description: Performs deep multi-phase project analysis to identify and recommend the single most impactful addition to implement.
 when_to_use: Use when the user wants a strategic deep-dive that recommends the single highest-impact addition to build next — not a code review or a list of improvements. User-triggered only.
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, EnterPlanMode, ExitPlanMode, AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash, Agent, Workflow, WebSearch, WebFetch, EnterPlanMode, ExitPlanMode, AskUserQuestion
 model: opus
-effort: max
+effort: xhigh
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
@@ -16,13 +16,37 @@ Execute each phase thoroughly before moving to the next. Use subagents for paral
 
 **Ask the user questions at any point during the analysis when it would improve the result.** Don't make assumptions about priorities, pain points, or goals when you can ask. Examples: after Phase 1, ask what areas matter most to them; during Phase 3, confirm which problems they actually feel; before Phase 4, ask if there are constraints or preferences you should know about. The goal is a recommendation tailored to what the user needs right now, not a generic suggestion.
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `agentType: 'Explore'` inside the `Workflow` script (omit `model` — each agent inherits the session model), or, on the `Agent`-tool fallback, with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The explicit `model: "opus"` on the `Agent` path pins the fan-out to the latest Opus even when a cheaper default subagent model is configured, so the analysis never silently runs on a smaller model. Never use general-purpose subagents in this skill.
 
 ---
 
 ## Phase 1: Deep Project Reconnaissance
 
-Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: "opus"`) covering three orthogonal lenses on the project. The IMPORTANT block above governs how every subagent must be configured.
+Run the reconnaissance as a **`Workflow` of exactly 3 read-only Explore agents in parallel** covering three orthogonal lenses on the project. Call the `Workflow` tool with a script along these lines, substituting each agent's brief verbatim from its `### Agent N` section. The IMPORTANT block above governs how every subagent must be configured.
+
+```js
+export const meta = {
+  name: 'enhance-recon',
+  description: 'Three-lens project reconnaissance: structure & stack, documentation & history, quality & gaps',
+  phases: [{ title: 'Recon' }],
+}
+
+const LENSES = [
+  { key: 'structure-stack', brief: `<Agent 1 brief, verbatim>` },
+  { key: 'docs-history',    brief: `<Agent 2 brief, verbatim>` },
+  { key: 'quality-gaps',    brief: `<Agent 3 brief, verbatim>` },
+]
+
+const digests = await parallel(LENSES.map(l => () =>
+  agent(`Explore the current project through the ${l.key} lens and return the structured digest described below.\n\n${l.brief}`,
+    { label: `recon:${l.key}`, phase: 'Recon', agentType: 'Explore' })))
+
+return { lenses: LENSES.map((l, i) => ({ key: l.key, digest: digests[i] })) }
+```
+
+Wait for the Workflow's completion notification before continuing — never synthesize from partial results. A `null` digest means that agent was skipped or failed; note the gap rather than silently dropping the lens.
+
+**Fallback.** If the `Workflow` tool is not available in this session, launch the same three briefs as **3 Explore subagents in parallel** via the `Agent` tool (`subagent_type: "Explore"`, `model: "opus"`).
 
 Each agent should return a structured digest of its findings. The synthesis in Phase 5 will weight hotspot files higher, flag single-author areas as bus-factor risk, treat deleted files as evidence of abandoned approaches, and use velocity as a proxy for capacity to absorb change.
 
