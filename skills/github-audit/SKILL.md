@@ -2,9 +2,9 @@
 name: github-audit
 description: Audits a GitHub repository against best practices and provides prioritized recommendations for README, license, community health, CI/CD, and repository settings.
 when_to_use: Use when the user asks for a GitHub repo audit, wants to evaluate README/license/community-health/CI-CD coverage, or asks "is this repo ready for public release".
-allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Workflow, WebSearch, WebFetch, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
 model: opus
-effort: max
+effort: xhigh
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
@@ -15,7 +15,7 @@ Execute each phase thoroughly before moving to the next. Use subagents for paral
 
 **Ask the user questions when it would improve the result.** For example: after Phase 1, ask about the project's intended audience (public library vs internal tool vs personal project) since this affects which best practices matter most.
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `agentType: 'Explore'` inside the `Workflow` script (omit `model` — each agent inherits the session model), or, on the `Agent`-tool fallback, with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The explicit `model: "opus"` on the `Agent` path pins the fan-out to the latest Opus even when a cheaper default subagent model is configured, so the analysis never silently runs on a smaller model. Never use general-purpose subagents in this skill.
 
 ## Pre-rendered context
 
@@ -33,7 +33,33 @@ If `Repo slug` is `(gh unavailable...)`, stop in Phase 1 with an actionable erro
 
 ## Phase 1: Repository Scan
 
-Launch Explore agents in parallel to gather data on all GitHub-relevant aspects of the repository.
+Run the scan as a **`Workflow` of exactly 3 read-only Explore agents in parallel** to gather data on all GitHub-relevant aspects of the repository. Call the `Workflow` tool with a script along these lines, substituting the pre-rendered context and each agent's brief verbatim from its `### Agent N` section. The IMPORTANT block above governs how every subagent must be configured.
+
+```js
+export const meta = {
+  name: 'github-audit-scan',
+  description: 'Three-lens repository scan: files & structure, README, GitHub settings & CI/CD',
+  phases: [{ title: 'Scan' }],
+}
+
+const CONTEXT = `<the pre-rendered repo slug, default branch, license, topics, and workflow list>`
+
+const LENSES = [
+  { key: 'files-structure', brief: `<Agent 1 brief, verbatim>` },
+  { key: 'readme',          brief: `<Agent 2 brief, verbatim>` },
+  { key: 'settings-cicd',   brief: `<Agent 3 brief, verbatim>` },
+]
+
+const reports = await parallel(LENSES.map(l => () =>
+  agent(`Scan this repository through the ${l.key} lens and return what you find, noting anything missing.\n${CONTEXT}\n\n${l.brief}`,
+    { label: `scan:${l.key}`, phase: 'Scan', agentType: 'Explore' })))
+
+return { lenses: LENSES.map((l, i) => ({ key: l.key, report: reports[i] })) }
+```
+
+Wait for the Workflow's completion notification before continuing — never evaluate from partial results. A `null` report means that agent was skipped or failed; note the gap in the scorecard rather than silently dropping the lens.
+
+**Fallback.** If the `Workflow` tool is not available in this session, launch the same three briefs as **3 Explore subagents in parallel** via the `Agent` tool (`subagent_type: "Explore"`, `model: "opus"`).
 
 ### Agent 1: File & Structure Audit
 

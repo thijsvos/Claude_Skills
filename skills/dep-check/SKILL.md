@@ -2,9 +2,9 @@
 name: dep-check
 description: Scans all dependency declarations across ecosystems, checks for updates and vulnerabilities, and produces a prioritized update plan with testing recommendations.
 when_to_use: Use when the user asks about outdated dependencies, package CVEs, pinned-version freshness, dependabot/renovate gaps, or wants an upgrade plan across ecosystems (npm, pip, cargo, go, gem, composer, docker, GitHub Actions).
-allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Workflow, WebSearch, WebFetch, Edit, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
-effort: max
+effort: xhigh
 argument-hint: "[manifest | directory | ecosystem]"
 ---
 
@@ -93,11 +93,37 @@ If no manifest files are found at all, inform the user and stop:
 
 ## Step 2: Parallel Dependency Analysis
 
-Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: "opus"`).
+Run the analysis as a **`Workflow` of exactly 3 read-only Explore agents in parallel** — one per lens below. Call the `Workflow` tool with a script along these lines, substituting the inventory from Step 1 and each agent's brief verbatim from its `### Agent N` section:
+
+```js
+export const meta = {
+  name: 'dep-check-analysis',
+  description: 'Three-lens dependency analysis: package updates, CI/CD & infrastructure versions, vulnerabilities & breaking changes',
+  phases: [{ title: 'Analyze' }],
+}
+
+const CONTEXT = `<the discovered manifest files with full contents, dependency names, current versions, version constraints, and detected ecosystems from Step 1>`
+
+const LENSES = [
+  { key: 'package-updates',   brief: `<Agent 1 brief, verbatim>` },
+  { key: 'ci-infra',          brief: `<Agent 2 brief, verbatim>` },
+  { key: 'security-breaking', brief: `<Agent 3 brief, verbatim>` },
+]
+
+const reports = await parallel(LENSES.map(l => () =>
+  agent(`Analyze the repository's dependencies through the ${l.key} lens.\n${CONTEXT}\n\n${l.brief}`,
+    { label: `analyze:${l.key}`, phase: 'Analyze', agentType: 'Explore' })))
+
+return { lenses: LENSES.map((l, i) => ({ key: l.key, report: reports[i] })) }
+```
+
+Wait for the Workflow's completion notification before continuing — never synthesize from partial results. A `null` report means that agent was skipped or failed; say so in the report header rather than silently dropping the lens.
+
+**Fallback.** If the `Workflow` tool is not available in this session, launch the same three briefs as **3 Explore subagents in parallel** via the `Agent` tool (`subagent_type: "Explore"`, `model: "opus"`).
 
 Provide each agent with the complete list of discovered manifest files, their full contents, the dependency names, current versions, version constraints, and the detected ecosystems from Step 1.
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `agentType: 'Explore'` inside the `Workflow` script (omit `model` — each agent inherits the session model), or, on the `Agent`-tool fallback, with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The explicit `model: "opus"` on the `Agent` path pins the fan-out to the latest Opus even when a cheaper default subagent model is configured, so the analysis never silently runs on a smaller model. Never use general-purpose subagents in this skill.
 
 ---
 
@@ -288,7 +314,7 @@ For dependencies with major version updates available (identified by Agent 1), a
 **Effort gate** for the WebSearch step (`${CLAUDE_EFFORT}`):
 - `max` / `xhigh` / `high` — perform breaking-change WebSearch lookups for every major bump (default).
 - `medium` — limit lookups to dependencies with ≥3 major versions of drift (e.g. v2 → v5).
-- `low` / `min` — skip WebSearch lookups entirely; report each major bump as "breaking change risk: not assessed (effort=${CLAUDE_EFFORT})" and recommend the user re-run at higher effort or consult the changelog manually.
+- `low` — skip WebSearch lookups entirely; report each major bump as "breaking change risk: not assessed (effort=${CLAUDE_EFFORT})" and recommend the user re-run at higher effort or consult the changelog manually.
 
 This avoids serializing 10+ WebSearch calls during a quick `/dep-check` while preserving the deep-dive when the user asked for one.
 

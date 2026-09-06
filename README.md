@@ -11,17 +11,17 @@ A curated collection of custom skills for [Claude Code](https://docs.anthropic.c
 
 | Skill | Description | Model | Effort | Example |
 |-------|-------------|-------|--------|---------|
-| [enhance](skills/enhance/) | Performs deep multi-phase project analysis to identify and recommend the single most impactful addition to implement. | Opus | Max | [view](skills/enhance/README.md#example) |
-| [github-audit](skills/github-audit/) | Audits a GitHub repository against best practices and provides prioritized recommendations for README, license, community health, CI/CD, and repository settings. | Opus | Max | [view](skills/github-audit/README.md#example) |
-| [vet](skills/vet/) | Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers. | Opus | Max | [view](skills/vet/README.md#example) |
-| [test-gen](skills/test-gen/) | Analyzes code to generate comprehensive tests covering happy paths, edge cases, error handling, and integration points, matching the project's existing test conventions. | Opus | Max | [view](skills/test-gen/README.md#example) |
-| [dep-check](skills/dep-check/) | Scans all dependency declarations across ecosystems, checks for updates and vulnerabilities, and produces a prioritized update plan with testing recommendations. | Opus | Max | [view](skills/dep-check/README.md#example) |
-| [diagnose](skills/diagnose/) | Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses. | Opus | Max | [view](skills/diagnose/README.md#example) |
-| [refactor](skills/refactor/) | Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes. | Opus | Max | [view](skills/refactor/README.md#example) |
-| [create-skill](skills/create-skill/) | Interactive skill generator that scaffolds new skills following all project conventions, serving as the definitive reference for skill creation. | Opus | Max | [view](skills/create-skill/README.md#example) |
-| [docstring-check](skills/docstring-check/) | Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies behavior-preserving fixes matching the project's detected convention. | Opus | Max | [view](skills/docstring-check/README.md#example) |
-| [github-ship](skills/github-ship/) | Turns local changes into a GitHub issue and linked PR, or cleans up the branch if the PR was already merged. Auto-detects which. | Opus | Max | [view](skills/github-ship/README.md#example) |
-| [idiom-check](skills/idiom-check/) | Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles. | Opus | Max | [view](skills/idiom-check/README.md#example) |
+| [enhance](skills/enhance/) | Performs deep multi-phase project analysis to identify and recommend the single most impactful addition to implement. | Opus | xhigh | [view](skills/enhance/README.md#example) |
+| [github-audit](skills/github-audit/) | Audits a GitHub repository against best practices and provides prioritized recommendations for README, license, community health, CI/CD, and repository settings. | Opus | xhigh | [view](skills/github-audit/README.md#example) |
+| [vet](skills/vet/) | Structured code review across correctness, security, performance, and conventions with prioritized findings and fix offers. | Opus | xhigh | [view](skills/vet/README.md#example) |
+| [test-gen](skills/test-gen/) | Analyzes code to generate comprehensive tests covering happy paths, edge cases, error handling, and integration points, matching the project's existing test conventions. | Opus | xhigh | [view](skills/test-gen/README.md#example) |
+| [dep-check](skills/dep-check/) | Scans all dependency declarations across ecosystems, checks for updates and vulnerabilities, and produces a prioritized update plan with testing recommendations. | Opus | xhigh | [view](skills/dep-check/README.md#example) |
+| [diagnose](skills/diagnose/) | Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses. | Opus | xhigh | [view](skills/diagnose/README.md#example) |
+| [refactor](skills/refactor/) | Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes. | Opus | xhigh | [view](skills/refactor/README.md#example) |
+| [create-skill](skills/create-skill/) | Interactive skill generator that scaffolds new skills following all project conventions, serving as the definitive reference for skill creation. | Opus | xhigh | [view](skills/create-skill/README.md#example) |
+| [docstring-check](skills/docstring-check/) | Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies behavior-preserving fixes matching the project's detected convention. | Opus | xhigh | [view](skills/docstring-check/README.md#example) |
+| [github-ship](skills/github-ship/) | Turns local changes into a GitHub issue and linked PR, or cleans up the branch if the PR was already merged. Auto-detects which. | Opus | xhigh | [view](skills/github-ship/README.md#example) |
+| [idiom-check](skills/idiom-check/) | Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles. | Opus | xhigh | [view](skills/idiom-check/README.md#example) |
 
 <!-- handoff-graph:start -->
 <details>
@@ -73,6 +73,16 @@ cd Claude_Skills
 ./install.sh enhance
 ```
 
+### Install as a Plugin (no `install.sh`)
+
+The repo ships a plugin manifest (`.claude-plugin/plugin.json`), so a clone placed directly under your skills directory loads as a plugin on the next session — no symlinks, no install step:
+
+```bash
+git clone https://github.com/thijsvos/Claude_Skills.git ~/.claude/skills/claude-skills
+```
+
+Skills are then namespaced as `/claude-skills:vet`, `/claude-skills:refactor`, and so on; `git pull` in that directory updates them. Use one method or the other — installing both ways gives you every skill twice (`/vet` and `/claude-skills:vet`).
+
 ### Use a Skill
 
 Once installed, invoke any skill inside Claude Code:
@@ -108,6 +118,20 @@ git pull
 
 That's it. Since skills are symlinked, pulling updates the actual skill files.
 
+### Managing Context Cost
+
+Every installed skill's `description` + `when_to_use` is rendered into the skill listing at the start of each session. That listing is budgeted at 1% of the context window by default (`skillListingBudgetFraction`) and each entry is capped at 1,536 characters (`skillListingMaxDescChars`) — `lint.sh` warns if a skill here exceeds that. If you only use a few of these skills:
+
+- Run `/skill-doctor` (Claude Code 2.1.261+) to see what each skill costs and how often it gets used.
+- Collapse or hide the ones you don't need without editing files, via `skillOverrides` (the `/skills` menu writes this for you into `.claude/settings.local.json`):
+
+  ```json
+  { "skillOverrides": { "enhance": "name-only", "idiom-check": "off" } }
+  ```
+
+  Values: `on` (default), `name-only`, `user-invocable-only` (hidden from Claude, still in the `/` menu), `off`.
+- Or simply install only what you use: `./install.sh vet refactor`.
+
 ## Adding a New Skill
 
 Each skill lives in its own directory under `skills/` with at minimum a `SKILL.md` file:
@@ -126,8 +150,8 @@ The `SKILL.md` file uses frontmatter to configure the skill:
 name: my-skill
 description: What the skill does
 allowed-tools: Read, Grep, Glob
-model: opus          # optional: opus, sonnet, haiku
-effort: max          # optional: min, low, medium, high, max
+model: opus          # optional: opus, sonnet, haiku, fable, inherit (aliases only)
+effort: xhigh        # optional: low, medium, high, xhigh, max
 ---
 
 Skill prompt content here...
@@ -152,6 +176,14 @@ The linter validates:
 - Required frontmatter fields (`name`, `description`, `allowed-tools`)
 - Skill name matches directory name
 - README.md exists with required sections (What It Does, Requirements, Usage, Configuration)
+- Frontmatter against `schemas/skill-frontmatter.schema.json`, the Workflow/Agent fan-out conventions, cross-skill handoffs, `skills.json` freshness, and the plugin manifest version — see [CLAUDE.md](CLAUDE.md#validation) for the full list
+
+CI additionally runs Claude Code's own validator (`claude plugin validate ./skills --strict`), which parses every `SKILL.md` with the real frontmatter parser:
+
+```bash
+claude plugin validate ./skills --strict   # skills, strict
+claude plugin validate .                   # plugin manifest
+```
 
 ### Templates
 

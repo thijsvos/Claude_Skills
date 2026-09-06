@@ -7,7 +7,7 @@ Comprehensive code refactoring across correctness, security, performance, and ma
 Analyzes code through three complementary dimensions simultaneously and produces a prioritized refactoring plan, delivered in 4 steps:
 
 1. **Scope Resolution** -- resolves the refactoring target from a file path, directory, function/class name, branch, commit range, or natural language description. Auto-detects recently changed files via git if no target is specified. Gathers project conventions and detects test coverage.
-2. **Multi-Dimensional Analysis** -- launches 3 parallel read-only Opus agents: Correctness & Security (logic errors, null safety, type safety, error handling, OWASP patterns, injection, auth, crypto), Performance & Efficiency (complexity, N+1 queries, allocations, caching, resource leaks, scalability), and Structure & Maintainability (naming, complexity, dead code, architecture, separation of concerns, API design, testability, duplication)
+2. **Multi-Dimensional Analysis** -- runs a Workflow of 3 parallel read-only Opus agents: Correctness & Security (logic errors, null safety, type safety, error handling, OWASP patterns, injection, auth, crypto), Performance & Efficiency (complexity, N+1 queries, allocations, caching, resource leaks, scalability), and Structure & Maintainability (naming, complexity, dead code, architecture, separation of concerns, API design, testability, duplication)
 3. **Refactoring Plan** -- synthesizes findings across all dimensions, identifies cross-cutting improvements (one change benefiting multiple dimensions), deduplicates, tracks dependencies, and presents a prioritized plan with confidence and risk ratings for each change
 4. **Incremental Execution** -- after user approval, applies changes in priority order, runs tests to verify behavior preservation, and offers rollback if anything breaks
 
@@ -16,6 +16,7 @@ The key innovation is **cross-cutting synthesis**: changes that improve multiple
 ## Requirements
 
 - Claude Code with **Opus model** access
+- The `Workflow` tool (available on paid plans and the API); the skill falls back to the `Agent` tool when it is unavailable or disabled via the `disableWorkflows` setting
 - Git repository (for auto-detection of changed files and pre-change backup; not strictly required when specifying a target explicitly)
 
 ## Usage
@@ -82,13 +83,13 @@ The `===` comparison is variable-time; switch to `crypto.timingSafeEqual` to clo
 | Setting | Value |
 |---------|-------|
 | Model | `opus` |
-| Effort | `max` |
+| Effort | `xhigh` |
 | Argument hint | `[path \| identifier \| branch \| range]` (optional: file path, directory, function name, branch, commit range, or description) |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Workflow, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 
-- **Read-only analysis**: All analysis agents (Step 2) use the Explore subagent type, which cannot modify files
+- **Read-only analysis**: All analysis agents (Step 2) use the Explore subagent type, which cannot modify files — the Workflow spawns them with `agentType: 'Explore'`, the Agent-tool fallback with `subagent_type: "Explore"`
 - **User approval gate**: No code is modified until you review the full refactoring plan and explicitly approve changes
 - **Pre-change backup**: Before applying changes, the skill creates a git stash so you can restore the original state at any time
 - **Test verification**: After applying changes, the skill runs the project's test suite (if detected) to verify behavior preservation

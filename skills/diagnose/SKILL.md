@@ -2,9 +2,9 @@
 name: diagnose
 description: Multi-agent root cause analysis that traces errors, correlates with recent changes, and identifies fixes with ranked hypotheses.
 when_to_use: Use when the user pastes an error message or stack trace, reports unexpected behavior, asks "why is X failing", or wants help finding the root cause of a CI/test failure.
-allowed-tools: Read, Grep, Glob, Bash, Agent, WebSearch, WebFetch, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Workflow, WebSearch, WebFetch, Edit, AskUserQuestion, Skill, EnterPlanMode, ExitPlanMode
 model: opus
-effort: max
+effort: xhigh
 argument-hint: "[error | path | identifier]"
 ---
 
@@ -84,7 +84,34 @@ Also gather project context by reading these files if they exist: `CLAUDE.md`, p
 
 ## Step 2: Parallel Root Cause Investigation
 
-Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: "opus"`).
+Run the investigation as a **`Workflow` of exactly 3 read-only Explore agents in parallel** — one per lens below. Call the `Workflow` tool with a script along these lines, substituting the problem parsed in Step 1 and each agent's brief verbatim from its `### Agent N` section:
+
+```js
+export const meta = {
+  name: 'diagnose-investigation',
+  description: 'Three-lens root cause investigation: error trace, change correlation, pattern & context',
+  phases: [{ title: 'Investigate' }],
+}
+
+const CONTEXT = `<the parsed error, file paths and line numbers, language/framework, and project context from Step 1>`
+const FORMAT = `<the "Each agent must return findings in this structured format" list below>`
+
+const LENSES = [
+  { key: 'error-trace',        brief: `<Agent 1 brief, verbatim>` },
+  { key: 'change-correlation', brief: `<Agent 2 brief, verbatim>` },
+  { key: 'pattern-context',    brief: `<Agent 3 brief, verbatim>` },
+]
+
+const reports = await parallel(LENSES.map(l => () =>
+  agent(`Investigate the following problem through the ${l.key} lens.\n${CONTEXT}\n\n${l.brief}\n\n${FORMAT}`,
+    { label: `investigate:${l.key}`, phase: 'Investigate', agentType: 'Explore' })))
+
+return { lenses: LENSES.map((l, i) => ({ key: l.key, report: reports[i] })) }
+```
+
+Wait for the Workflow's completion notification before continuing — never synthesize from partial results. A `null` report means that agent was skipped or failed; say so in the report rather than silently dropping the lens.
+
+**Fallback.** If the `Workflow` tool is not available in this session, launch the same three briefs as **3 Explore subagents in parallel** via the `Agent` tool (`subagent_type: "Explore"`, `model: "opus"`).
 
 Provide each agent with:
 - The parsed error information from Step 1
@@ -92,7 +119,7 @@ Provide each agent with:
 - The language/framework context
 - Any project context gathered
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during investigation. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `agentType: 'Explore'` inside the `Workflow` script (omit `model` — each agent inherits the session model), or, on the `Agent`-tool fallback, with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during investigation. The explicit `model: "opus"` on the `Agent` path pins the fan-out to the latest Opus even when a cheaper default subagent model is configured, so the analysis never silently runs on a smaller model. Never use general-purpose subagents in this skill.
 
 Each agent must return findings in this structured format:
 - **Hypothesis**: a clear statement of what might be wrong

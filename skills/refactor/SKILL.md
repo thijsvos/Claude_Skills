@@ -2,9 +2,9 @@
 name: refactor
 description: Comprehensive code refactoring across correctness, security, performance, and maintainability with behavior-preserving, incremental changes.
 when_to_use: Use when the user wants to refactor a specific file/module/function — distinct from /vet (which works on a diff) and /idiom-check (which audits the whole codebase through one language lens).
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Workflow, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
-effort: max
+effort: xhigh
 argument-hint: "[path | identifier | branch | range]"
 ---
 
@@ -113,18 +113,66 @@ State the resolved target, detected project context, and test coverage status cl
 
 ## Step 2: Multi-Dimensional Analysis
 
-Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: "opus"`).
+Run the analysis as a **`Workflow` of exactly 3 read-only Explore agents in parallel** — one per lens below. Call the `Workflow` tool with a script along these lines, substituting the context resolved in Step 1 and each agent's brief verbatim from its `### Agent N` section:
+
+```js
+export const meta = {
+  name: 'refactor-analysis',
+  description: 'Three-lens refactoring analysis: correctness & security, performance, structure',
+  phases: [{ title: 'Analyze' }],
+}
+
+const CONTEXT = `<the target files, project context, and language/framework resolved in Step 1>`
+
+// Mirrors the structured format below — the harness validates each agent's return against it.
+// `rating` carries the lens-specific field: Severity (Agent 1), Impact (Agent 2), Category (Agent 3).
+const FINDINGS = {
+  type: 'object', additionalProperties: false,
+  properties: {
+    findings: { type: 'array', items: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        id: { type: 'string' }, file: { type: 'string' }, line: { type: 'string' },
+        title: { type: 'string', maxLength: 80 },
+        current: { type: 'string' }, proposed: { type: 'string' }, rationale: { type: 'string' },
+        confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+        risk: { type: 'string', enum: ['safe', 'moderate', 'breaking'] },
+        rating: { type: 'string' },
+      },
+      required: ['id', 'file', 'line', 'title', 'current', 'proposed', 'rationale', 'confidence', 'risk', 'rating'],
+    } },
+    looks_good: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'string' } },
+  },
+  required: ['findings', 'looks_good'],
+}
+
+const LENSES = [
+  { key: 'correctness-security', brief: `<Agent 1 brief, verbatim>` },
+  { key: 'performance',          brief: `<Agent 2 brief, verbatim>` },
+  { key: 'structure',            brief: `<Agent 3 brief, verbatim>` },
+]
+
+const reports = await parallel(LENSES.map(l => () =>
+  agent(`Analyze the target code through the ${l.key} lens. Read the FULL target files, not just snippets.\n${CONTEXT}\n\n${l.brief}`,
+    { label: `analyze:${l.key}`, phase: 'Analyze', agentType: 'Explore', schema: FINDINGS })))
+
+return { lenses: LENSES.map((l, i) => ({ key: l.key, report: reports[i] })) }
+```
+
+Wait for the Workflow's completion notification before continuing — never synthesize from partial results. Each `report` is a validated `{ findings, looks_good }` object; a `null` report means that agent was skipped or failed — say so in the plan header rather than silently dropping the lens.
+
+**Fallback.** If the `Workflow` tool is not available in this session, launch the same three briefs as **3 Explore subagents in parallel** via the `Agent` tool (`subagent_type: "Explore"`, `model: "opus"`).
 
 Provide each agent with:
 - The resolved target files from Step 1
 - The project context (manifest, linting config, conventions)
 - The language and framework detected
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `agentType: 'Explore'` inside the `Workflow` script (omit `model` — each agent inherits the session model), or, on the `Agent`-tool fallback, with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The explicit `model: "opus"` on the `Agent` path pins the fan-out to the latest Opus even when a cheaper default subagent model is configured, so the analysis never silently runs on a smaller model. Never use general-purpose subagents in this skill.
 
 **IMPORTANT:** Instruct each agent to read the **full target files** (not just snippets) so they understand the complete code structure, how functions relate to each other, and whether a proposed change would break callers or dependents.
 
-Each agent must return findings in this structured format:
+Each agent must return findings in this structured format (the `FINDINGS` schema above enforces it on the Workflow path; on the Agent-tool fallback, include the list in each prompt):
 - **ID**: agent-local identifier (e.g., C1, P1, S1)
 - **File**: exact file path and line number(s)
 - **Title**: short description (under 80 characters)

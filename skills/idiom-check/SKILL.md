@@ -2,9 +2,25 @@
 name: idiom-check
 description: Audits a codebase through a programming-language-specific idiom lens, produces a prioritized report, and offers remediation in PR-sized bundles.
 when_to_use: Use when the user asks for a language-specific idiom audit (e.g., "are we writing idiomatic Rust", "is this Pythonic", "Go-style review") of the whole codebase. Distinct from /vet (which works on a diff) and /refactor (single target).
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Workflow, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, Skill, EnterPlanMode, ExitPlanMode
 model: opus
-effort: max
+effort: xhigh
+# Hard guard for the two things Step 5's prose forbids: bypassing commit hooks
+# and rewriting remote history. Fires on every Bash call for the rest of the
+# session (skill hooks are session-scoped). Inline shell on purpose —
+# ${CLAUDE_SKILL_DIR} is not expanded in hook commands. Exit 2 blocks the call.
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: |
+            input=$(cat)
+            if printf '%s' "$input" | grep -qE -- '--no-verify|git push[^;&|]*(--force|-f( |"|\\|$))'; then
+              echo 'Blocked by the /idiom-check guard: --no-verify and force-push are never allowed. Fix the failing hook or open a new PR instead.' >&2
+              exit 2
+            fi
+            exit 0
 ---
 
 Call `EnterPlanMode` immediately before doing anything else.
@@ -80,7 +96,56 @@ State the resolved language (with version if detected), the file count and total
 
 ## Step 2: Multi-Lens Language-Specific Analysis
 
-Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: "opus"`).
+Run the audit as a **`Workflow` of exactly 3 read-only Explore agents in parallel** — one per lens from the language matrix below. Call the `Workflow` tool with a script along these lines, substituting the language, scope, and conventions resolved in Step 1 and the three lens briefs from the matching row of the **Language Lens Matrix**:
+
+```js
+export const meta = {
+  name: 'idiom-check-analysis',
+  description: 'Three-lens language-specific idiom audit of the codebase',
+  phases: [{ title: 'Audit' }],
+}
+
+const CONTEXT = `<the detected language (and version), the full list of source files in scope, and the conventions gathered in Step 1>`
+const RULES = `<the three "Each agent's instructions must include" rules below: the ~12 cap, "why in THIS codebase" framing, and the Looks Good callouts>`
+
+// Mirrors the structured format below — the harness validates each agent's return against it.
+// maxItems: 12 enforces the per-agent cap; minItems on looks_good enforces the mandatory callouts.
+const FINDINGS = {
+  type: 'object', additionalProperties: false,
+  properties: {
+    findings: { type: 'array', maxItems: 12, items: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        id: { type: 'string' }, file: { type: 'string' }, line: { type: 'string' },
+        title: { type: 'string', maxLength: 80 },
+        current: { type: 'string' }, idiomatic: { type: 'string' }, why: { type: 'string' },
+        severity: { type: 'string', enum: ['high', 'medium', 'low'] },
+        confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+        risk: { type: 'string', enum: ['safe', 'moderate', 'breaking'] },
+      },
+      required: ['id', 'file', 'line', 'title', 'current', 'idiomatic', 'why', 'severity', 'confidence', 'risk'],
+    } },
+    looks_good: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'string' } },
+  },
+  required: ['findings', 'looks_good'],
+}
+
+const LENSES = [
+  { key: '<lens 1 slug, e.g. ownership>', brief: `<Lens 1 bullet list from the matrix row, verbatim>` },
+  { key: '<lens 2 slug, e.g. types>',     brief: `<Lens 2 bullet list from the matrix row, verbatim>` },
+  { key: '<lens 3 slug, e.g. idioms>',    brief: `<Lens 3 bullet list from the matrix row, verbatim>` },
+]
+
+const reports = await parallel(LENSES.map(l => () =>
+  agent(`Audit the codebase through the ${l.key} lens. Read the FULL target files, not just snippets.\n${CONTEXT}\n\n${l.brief}\n\n${RULES}`,
+    { label: `audit:${l.key}`, phase: 'Audit', agentType: 'Explore', schema: FINDINGS })))
+
+return { lenses: LENSES.map((l, i) => ({ key: l.key, report: reports[i] })) }
+```
+
+Wait for the Workflow's completion notification before continuing — never synthesize from partial results. Each `report` is a validated `{ findings, looks_good }` object; a `null` report means that agent was skipped or failed — say so in the report header rather than silently dropping the lens.
+
+**Fallback.** If the `Workflow` tool is not available in this session, launch the same three briefs as **3 Explore subagents in parallel** via the `Agent` tool (`subagent_type: "Explore"`, `model: "opus"`).
 
 Provide each agent with:
 - The detected primary language (and version, if known)
@@ -88,7 +153,7 @@ Provide each agent with:
 - The project conventions gathered in Step 1 (CLAUDE.md excerpts, lint/style configs)
 - The agent's specific lens (one of the three lenses for the detected language — see the lens matrix below)
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `agentType: 'Explore'` inside the `Workflow` script (omit `model` — each agent inherits the session model), or, on the `Agent`-tool fallback, with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The explicit `model: "opus"` on the `Agent` path pins the fan-out to the latest Opus even when a cheaper default subagent model is configured, so the analysis never silently runs on a smaller model. Never use general-purpose subagents in this skill.
 
 **IMPORTANT:** Instruct each agent to read the **full target files** (not just snippets) so they understand the complete code structure, how functions relate to each other, and whether a proposed change would break callers or dependents.
 
@@ -98,7 +163,7 @@ Provide each agent with:
 2. **Frame every finding as "why in THIS codebase"** — not generic blog advice. Tie each finding to the surrounding code, the project's conventions, the data flow, or the call sites. A finding that could appear verbatim in a tutorial is not a finding.
 3. **Return 2-3 mandatory "Looks Good" callouts** — things this codebase already does well in the agent's lens. This grounds the report and prevents over-engineering.
 
-**Each finding must be returned in this structured format:**
+**Each finding must be returned in this structured format** (the `FINDINGS` schema above enforces it on the Workflow path; on the Agent-tool fallback, include the list in each prompt):
 
 - **ID**: agent-local identifier (e.g., O1, T1, F1 for the first agent's findings)
 - **File**: exact path and line number(s)

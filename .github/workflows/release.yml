@@ -32,6 +32,19 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      - name: Check plugin manifest version matches tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # .claude-plugin/plugin.json is what Claude Code reads when the repo is
+          # installed as a plugin, so its version must be bumped with every release
+          # (lint.sh also checks it against the latest CHANGELOG heading).
+          manifest_version=$(jq -r '.version // ""' .claude-plugin/plugin.json)
+          if [ "$manifest_version" != "$VERSION" ]; then
+            echo "::error::.claude-plugin/plugin.json version is '$manifest_version' but the tag is v$VERSION — bump the manifest before tagging"
+            exit 1
+          fi
+
       - name: Extract release notes from CHANGELOG.md
         id: notes
         env:

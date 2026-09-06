@@ -1,0 +1,23 @@
+{
+  "name": "claude-skills",
+  "displayName": "Claude Skills",
+  "version": "0.3.0",
+  "description": "A curated collection of custom skills for Claude Code: structured code review, refactoring, test generation, root-cause diagnosis, dependency and docstring audits, language-idiom checks, GitHub repository audits, and issue+PR shipping.",
+  "author": {
+    "name": "thijsvos",
+    "url": "https://github.com/thijsvos"
+  },
+  "homepage": "https://github.com/thijsvos/Claude_Skills",
+  "repository": "https://github.com/thijsvos/Claude_Skills",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "skills",
+    "code-review",
+    "refactoring",
+    "testing",
+    "dependencies",
+    "docstrings",
+    "github"
+  ]
+}

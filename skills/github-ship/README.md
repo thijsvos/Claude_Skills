@@ -95,7 +95,7 @@ Shipping a small fix from a clean working tree on `main`:
 | Setting | Value |
 |---------|-------|
 | Model | `opus` |
-| Effort | `max` |
+| Effort | `xhigh` |
 | Argument hint | No |
 | Allowed tools | Read, Grep, Glob, Bash, AskUserQuestion, EnterPlanMode, ExitPlanMode |
 
@@ -108,3 +108,4 @@ No `Edit` or `Write` — all changes run through `git` or `gh`.
 - **Force-delete confirmation**: Deleting a local branch with unmerged commits (common with squash-merged PRs) requires a second inline confirmation
 - **Dirty tree refusal**: Cleanup stops if the working tree has uncommitted changes
 - **No hook bypass**: Commits never use `--no-verify`; if a pre-commit hook fails, the skill stops and surfaces the error
+- **Hard guard, not just prose**: The skill declares a skill-scoped `PreToolUse` hook on `Bash` that blocks any command containing `--no-verify` or a `git push` with `--force`/`-f` (exit 2, with an explanatory message). Note that Claude Code keeps skill hooks active **for the rest of the session** after the skill runs, so the guard also protects later turns; start a new session if you genuinely need a force-push

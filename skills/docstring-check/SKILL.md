@@ -2,9 +2,9 @@
 name: docstring-check
 description: Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and applies behavior-preserving fixes matching the project's detected convention.
 when_to_use: Use when the user asks about missing/outdated docstrings, signature-vs-doc drift, docstring coverage on the public API, or wants to align documentation to a detected project style (Google/NumPy/reST/TSDoc/JSDoc/godoc/rustdoc/Javadoc).
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Workflow, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode
 model: opus
-effort: max
+effort: xhigh
 argument-hint: "[path | symbol | branch | range]"
 ---
 
@@ -129,7 +129,53 @@ State the resolved scope, file count, detected language(s), detected docstring s
 
 ## Step 2: Multi-Dimensional Docstring Analysis
 
-Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: "opus"`).
+Run the analysis as a **`Workflow` of exactly 3 read-only Explore agents in parallel** — one per lens below. Call the `Workflow` tool with a script along these lines, substituting the scope resolved in Step 1 and each agent's brief verbatim from its `### Agent N` section:
+
+```js
+export const meta = {
+  name: 'docstring-check-analysis',
+  description: 'Three-lens docstring analysis: coverage & presence, accuracy & drift, style & convention',
+  phases: [{ title: 'Analyze' }],
+}
+
+const CONTEXT = `<the file list, detected docstring style or explicit configuration, runnable linters, and language(s) from Step 1>`
+
+// Mirrors the structured format below — the harness validates each agent's return against it.
+const FINDINGS = {
+  type: 'object', additionalProperties: false,
+  properties: {
+    findings: { type: 'array', items: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        id: { type: 'string' }, file: { type: 'string' }, line: { type: 'string' },
+        symbol: { type: 'string' },
+        current: { type: 'string' }, proposed: { type: 'string' }, rationale: { type: 'string' },
+        confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+        severity: { type: 'string', enum: ['critical', 'high', 'medium', 'low'] },
+      },
+      required: ['id', 'file', 'line', 'symbol', 'current', 'proposed', 'rationale', 'confidence', 'severity'],
+    } },
+    looks_good: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'string' } },
+  },
+  required: ['findings', 'looks_good'],
+}
+
+const LENSES = [
+  { key: 'coverage', brief: `<Agent 1 brief, verbatim>` },
+  { key: 'drift',    brief: `<Agent 2 brief, verbatim>` },
+  { key: 'style',    brief: `<Agent 3 brief, verbatim>` },
+]
+
+const reports = await parallel(LENSES.map(l => () =>
+  agent(`Audit the docstrings in scope through the ${l.key} lens. Read the FULL target files, not just snippets. Use "(missing)" as \`current\` for symbols with no docstring.\n${CONTEXT}\n\n${l.brief}`,
+    { label: `analyze:${l.key}`, phase: 'Analyze', agentType: 'Explore', schema: FINDINGS })))
+
+return { lenses: LENSES.map((l, i) => ({ key: l.key, report: reports[i] })) }
+```
+
+Wait for the Workflow's completion notification before continuing — never synthesize from partial results. Each `report` is a validated `{ findings, looks_good }` object; a `null` report means that agent was skipped or failed — say so in the plan header rather than silently dropping the lens.
+
+**Fallback.** If the `Workflow` tool is not available in this session, launch the same three briefs as **3 Explore subagents in parallel** via the `Agent` tool (`subagent_type: "Explore"`, `model: "opus"`).
 
 Provide each agent with:
 - The resolved scope (file list) from Step 1
@@ -137,11 +183,11 @@ Provide each agent with:
 - The list of runnable linters
 - The language(s) present
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `agentType: 'Explore'` inside the `Workflow` script (omit `model` — each agent inherits the session model), or, on the `Agent`-tool fallback, with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The explicit `model: "opus"` on the `Agent` path pins the fan-out to the latest Opus even when a cheaper default subagent model is configured, so the analysis never silently runs on a smaller model. Never use general-purpose subagents in this skill.
 
 **IMPORTANT:** Instruct each agent to read the **full target files** (not just snippets). Understanding the function body is essential for both drift detection (does the docstring describe what the code actually does?) and proposed-content generation (what should the docstring say?).
 
-Each agent must return findings in this structured format:
+Each agent must return findings in this structured format (the `FINDINGS` schema above enforces it on the Workflow path; on the Agent-tool fallback, include the list in each prompt):
 - **ID**: agent-local identifier (e.g., A1, B1, C1)
 - **File:Line**: exact file path and line number of the symbol
 - **Symbol**: the function/class/method/constant name and signature

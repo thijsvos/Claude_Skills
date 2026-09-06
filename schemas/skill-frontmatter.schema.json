@@ -24,9 +24,16 @@
       "description": "Comma-separated list of tool names the skill may use. Each token is a tool name (e.g. Read, Grep, Agent, EnterPlanMode).",
       "pattern": "^[A-Za-z]+(\\s*,\\s*[A-Za-z]+)*$"
     },
+    "disallowed-tools": {
+      "description": "Tools removed from Claude's pool while the skill is active. Comma-separated string or a list of tool names.",
+      "oneOf": [
+        { "type": "string", "pattern": "^[A-Za-z]+(\\s*,\\s*[A-Za-z]+)*$" },
+        { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z]+$" }, "minItems": 1 }
+      ]
+    },
     "model": {
-      "description": "Model override for the skill turn.",
-      "enum": ["opus", "sonnet", "haiku", "inherit"]
+      "description": "Model override for the skill turn. Alias-only by repo policy (the aliases are live pointers to the latest model of each tier); full model IDs are accepted by Claude Code but rejected here so prose and frontmatter never hardcode a version.",
+      "enum": ["opus", "sonnet", "haiku", "fable", "inherit"]
     },
     "effort": {
       "description": "Effort level for the skill turn.",
@@ -68,13 +75,58 @@
       "type": "string",
       "description": "Subagent type to use when context: fork is set (e.g. Explore, Plan, general-purpose, or a custom agent)."
     },
+    "background": {
+      "type": "boolean",
+      "description": "When context: fork is set, whether the forked subagent runs in the background (default true). Set false to wait for its result inline. Requires Claude Code 2.1.218+."
+    },
     "hooks": {
       "type": "object",
-      "description": "Skill-scoped hooks."
+      "description": "Skill-scoped hooks, keyed by event name (PreToolUse, PostToolUse, ...). Registered when the skill is invoked and kept for the rest of the session unless a handler sets once: true.",
+      "propertyNames": { "pattern": "^[A-Z][A-Za-z]+$" },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "matcher": { "type": "string" },
+            "hooks": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": { "enum": ["command", "http", "mcp_tool", "prompt", "agent"] },
+                  "command": { "type": "string" },
+                  "if": { "type": "string" },
+                  "once": { "type": "boolean" },
+                  "timeout": { "type": "number" },
+                  "statusMessage": { "type": "string" }
+                }
+              }
+            }
+          },
+          "required": ["hooks"]
+        }
+      }
     },
     "shell": {
       "description": "Shell used for !`command` dynamic context injection blocks.",
       "enum": ["bash", "powershell"]
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Free-form map for custom data. Claude Code ignores it."
+    },
+    "license": {
+      "type": "string",
+      "description": "License identifier for the skill (Agent Skills spec; informational).",
+      "maxLength": 100
+    },
+    "compatibility": {
+      "type": "string",
+      "description": "Environment requirements (Agent Skills spec; informational).",
+      "maxLength": 500
     },
     "takes-arg": {
       "type": "boolean",
@@ -86,6 +138,10 @@
     {
       "if": { "properties": { "context": { "const": "fork" } }, "required": ["context"] },
       "then": { "required": ["agent"] }
+    },
+    {
+      "if": { "required": ["background"] },
+      "then": { "required": ["context"] }
     }
   ]
 }

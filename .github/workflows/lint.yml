@@ -26,3 +26,23 @@ jobs:
         run: pip install 'check-jsonschema==0.37.2'
       - name: Run skill linter
         run: bash lint.sh
+
+  # Second opinion from Claude Code's own validator: it parses every SKILL.md
+  # with the real frontmatter parser and validates the plugin manifest. No
+  # authentication needed. Strict on skills/ so an unrecognized field fails the
+  # build; non-strict on the repo root because the validator warns that the
+  # development CLAUDE.md "is not loaded as plugin context" — true, and intended.
+  plugin-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install Claude Code CLI
+        run: npm install -g '@anthropic-ai/claude-code@2.1.263'
+      - name: Validate skills (strict)
+        run: claude plugin validate ./skills --strict
+      - name: Validate plugin manifest
+        run: claude plugin validate .

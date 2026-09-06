@@ -12,6 +12,7 @@
         "Glob",
         "Bash",
         "Agent",
+        "Workflow",
         "Edit",
         "Write",
         "AskUserQuestion",
@@ -19,10 +20,11 @@
         "ExitPlanMode"
       ],
       "model": "opus",
-      "effort": "max",
+      "effort": "xhigh",
       "argument_hint": "[skill description]",
       "when_to_use": "Use when the user wants to create a new Claude Code skill, asks how to package a workflow as a skill, or describes a repeatable procedure they want callable as `/something`.",
       "uses_subagents": true,
+      "uses_workflow": true,
       "handoffs": [],
       "finding_id_prefixes": [
         "X"
@@ -37,6 +39,7 @@
         "Glob",
         "Bash",
         "Agent",
+        "Workflow",
         "WebSearch",
         "WebFetch",
         "Edit",
@@ -48,10 +51,11 @@
         "ExitPlanMode"
       ],
       "model": "opus",
-      "effort": "max",
+      "effort": "xhigh",
       "argument_hint": "[manifest | directory | ecosystem]",
       "when_to_use": "Use when the user asks about outdated dependencies, package CVEs, pinned-version freshness, dependabot/renovate gaps, or wants an upgrade plan across ecosystems (npm, pip, cargo, go, gem, composer, docker, GitHub Actions).",
       "uses_subagents": true,
+      "uses_workflow": true,
       "handoffs": [
         "test-gen"
       ],
@@ -68,6 +72,7 @@
         "Glob",
         "Bash",
         "Agent",
+        "Workflow",
         "WebSearch",
         "WebFetch",
         "Edit",
@@ -77,10 +82,11 @@
         "ExitPlanMode"
       ],
       "model": "opus",
-      "effort": "max",
+      "effort": "xhigh",
       "argument_hint": "[error | path | identifier]",
       "when_to_use": "Use when the user pastes an error message or stack trace, reports unexpected behavior, asks \"why is X failing\", or wants help finding the root cause of a CI/test failure.",
       "uses_subagents": true,
+      "uses_workflow": true,
       "handoffs": [
         "test-gen"
       ],
@@ -97,6 +103,7 @@
         "Glob",
         "Bash",
         "Agent",
+        "Workflow",
         "Edit",
         "Write",
         "AskUserQuestion",
@@ -106,10 +113,11 @@
         "ExitPlanMode"
       ],
       "model": "opus",
-      "effort": "max",
+      "effort": "xhigh",
       "argument_hint": "[path | symbol | branch | range]",
       "when_to_use": "Use when the user asks about missing/outdated docstrings, signature-vs-doc drift, docstring coverage on the public API, or wants to align documentation to a detected project style (Google/NumPy/reST/TSDoc/JSDoc/godoc/rustdoc/Javadoc).",
       "uses_subagents": true,
+      "uses_workflow": true,
       "handoffs": [],
       "finding_id_prefixes": [
         "D"
@@ -124,6 +132,7 @@
         "Glob",
         "Bash",
         "Agent",
+        "Workflow",
         "WebSearch",
         "WebFetch",
         "EnterPlanMode",
@@ -131,10 +140,11 @@
         "AskUserQuestion"
       ],
       "model": "opus",
-      "effort": "max",
+      "effort": "xhigh",
       "when_to_use": "Use when the user wants a strategic deep-dive that recommends the single highest-impact addition to build next — not a code review or a list of improvements. User-triggered only.",
       "disable_model_invocation": true,
       "uses_subagents": true,
+      "uses_workflow": true,
       "handoffs": [],
       "finding_id_prefixes": []
     },
@@ -147,6 +157,7 @@
         "Glob",
         "Bash",
         "Agent",
+        "Workflow",
         "WebSearch",
         "WebFetch",
         "AskUserQuestion",
@@ -155,9 +166,10 @@
         "ExitPlanMode"
       ],
       "model": "opus",
-      "effort": "max",
+      "effort": "xhigh",
       "when_to_use": "Use when the user asks for a GitHub repo audit, wants to evaluate README/license/community-health/CI-CD coverage, or asks \"is this repo ready for public release\".",
       "uses_subagents": true,
+      "uses_workflow": true,
       "handoffs": [
         "dep-check",
         "docstring-check",
@@ -180,9 +192,10 @@
         "ExitPlanMode"
       ],
       "model": "opus",
-      "effort": "max",
+      "effort": "xhigh",
       "when_to_use": "Use when the user wants to ship pending changes as a GitHub issue + PR pair, or wants to clean up a feature branch after the PR has been merged on GitHub. Auto-detects create vs cleanup mode.",
       "uses_subagents": false,
+      "uses_workflow": false,
       "handoffs": [],
       "finding_id_prefixes": []
     },
@@ -195,6 +208,7 @@
         "Glob",
         "Bash",
         "Agent",
+        "Workflow",
         "Edit",
         "Write",
         "AskUserQuestion",
@@ -205,9 +219,10 @@
         "ExitPlanMode"
       ],
       "model": "opus",
-      "effort": "max",
+      "effort": "xhigh",
       "when_to_use": "Use when the user asks for a language-specific idiom audit (e.g., \"are we writing idiomatic Rust\", \"is this Pythonic\", \"Go-style review\") of the whole codebase. Distinct from /vet (which works on a diff) and /refactor (single target).",
       "uses_subagents": true,
+      "uses_workflow": true,
       "handoffs": [
         "vet"
       ],
@@ -225,6 +240,7 @@
         "Glob",
         "Bash",
         "Agent",
+        "Workflow",
         "Edit",
         "Write",
         "AskUserQuestion",
@@ -235,10 +251,11 @@
         "ExitPlanMode"
       ],
       "model": "opus",
-      "effort": "max",
+      "effort": "xhigh",
       "argument_hint": "[path | identifier | branch | range]",
       "when_to_use": "Use when the user wants to refactor a specific file/module/function — distinct from /vet (which works on a diff) and /idiom-check (which audits the whole codebase through one language lens).",
       "uses_subagents": true,
+      "uses_workflow": true,
       "handoffs": [
         "test-gen"
       ],
@@ -255,6 +272,7 @@
         "Glob",
         "Bash",
         "Agent",
+        "Workflow",
         "Edit",
         "Write",
         "AskUserQuestion",
@@ -262,10 +280,11 @@
         "ExitPlanMode"
       ],
       "model": "opus",
-      "effort": "max",
+      "effort": "xhigh",
       "argument_hint": "[path | identifier]",
       "when_to_use": "Use when the user asks to generate, write, or create tests for a specific file, function, class, or directory. Also after a refactor or bug fix when the user wants regression coverage.",
       "uses_subagents": true,
+      "uses_workflow": true,
       "handoffs": [],
       "finding_id_prefixes": [
         "T"
@@ -288,10 +307,11 @@
         "ExitPlanMode"
       ],
       "model": "opus",
-      "effort": "max",
+      "effort": "xhigh",
       "argument_hint": "[ultra] [path | identifier | ref | range]",
       "when_to_use": "Use when the user asks for a review of pending changes, wants a verdict on a diff, asks \"is this ready to merge\", or names a file/branch/commit-range to review.",
       "uses_subagents": true,
+      "uses_workflow": true,
       "handoffs": [
         "refactor"
       ],

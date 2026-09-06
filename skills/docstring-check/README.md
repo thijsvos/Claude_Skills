@@ -7,7 +7,7 @@ Scans a codebase for missing, outdated, drifted, or inconsistent docstrings and 
 Audits code for three classes of docstring problem in parallel and produces a prioritized fix plan, delivered in 4 steps:
 
 1. **Scope Resolution & Context Detection** -- resolves the audit target from a file path, directory, function/class name, branch, commit range, or natural language description. Defaults to a full-codebase scan if no target is given, with a scope-narrowing prompt for large repos. Reads project configuration to find the authoritative docstring style (`[tool.pydocstyle]`, `tsdoc.json`, `.rubocop.yml`, etc.); infers the style from existing docstrings when not configured. Detects available linters (ruff/pydocstyle, eslint-plugin-jsdoc, staticcheck, `missing_docs`, Javadoc, CS1591) and doc-build tools (Sphinx, TypeDoc, rustdoc, Doxygen) for verification.
-2. **Multi-Dimensional Analysis** -- launches 3 parallel read-only Opus agents: Coverage & Presence (missing docstrings on public API, delegating to native linters where available), Accuracy & Drift (signature-vs-docstring mismatch, missing `@returns`/`@throws`, type mismatches, copy-paste rot, stale descriptions), and Style & Convention (cross-file style consistency, under-informative content, formatting violations, link rot).
+2. **Multi-Dimensional Analysis** -- runs a Workflow of 3 parallel read-only Opus agents: Coverage & Presence (missing docstrings on public API, delegating to native linters where available), Accuracy & Drift (signature-vs-docstring mismatch, missing `@returns`/`@throws`, type mismatches, copy-paste rot, stale descriptions), and Style & Convention (cross-file style consistency, under-informative content, formatting violations, link rot).
 3. **Docstring Plan** -- synthesizes findings across all agents, deduplicates, batches by file, prioritizes public API first, and presents a plan with severity/confidence ratings and the full proposed docstring text for every finding.
 4. **Incremental Execution** -- after user approval, applies docstring fixes via `Edit` (preserving indentation and matching the detected style), creates a git stash backup beforehand, re-runs the detected linter/doc-build tool to verify nothing regressed, and offers rollback if anything breaks.
 
@@ -16,6 +16,7 @@ The key behaviors are **convention-matching** (fixes adopt the project's detecte
 ## Requirements
 
 - Claude Code with **Opus model** access
+- The `Workflow` tool (available on paid plans and the API); the skill falls back to the `Agent` tool when it is unavailable or disabled via the `disableWorkflows` setting
 - Git repository (for pre-change backup and full-codebase scope-narrowing heuristics; not strictly required when specifying a target explicitly)
 - Optional: the project's own docstring linter or doc-build tool installed (`ruff`, `pydocstyle`, `eslint-plugin-jsdoc`, `staticcheck`, `cargo doc`, `sphinx-build`, `typedoc`, etc.) — the skill auto-detects and uses whatever is present for verification
 
@@ -90,13 +91,13 @@ Linter available — will re-run `ruff check --select D src/users.py` after fixe
 | Setting | Value |
 |---------|-------|
 | Model | `opus` |
-| Effort | `max` |
+| Effort | `xhigh` |
 | Argument hint | `[path \| symbol \| branch \| range]` (optional: file path, directory, symbol name, branch, commit range, or description) |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Workflow, Edit, Write, AskUserQuestion, TaskCreate, TaskUpdate, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 
-- **Read-only analysis**: All analysis agents (Step 2) use the Explore subagent type, which cannot modify files
+- **Read-only analysis**: All analysis agents (Step 2) use the Explore subagent type, which cannot modify files — the Workflow spawns them with `agentType: 'Explore'`, the Agent-tool fallback with `subagent_type: "Explore"`
 - **User approval gate**: No docstrings are edited until you review the full plan and explicitly approve changes
 - **Pre-change backup**: Before applying fixes, the skill creates a git stash so you can restore the original state at any time
 - **Post-change verification**: After fixes are applied, the skill re-runs the detected docstring linter or doc-build tool to catch regressions (link rot, type mismatches, broken `{@link}` references)

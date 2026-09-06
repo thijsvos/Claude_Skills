@@ -2,9 +2,9 @@
 name: test-gen
 description: Analyzes code to generate comprehensive tests covering happy paths, edge cases, error handling, and integration points, matching the project's existing test conventions.
 when_to_use: Use when the user asks to generate, write, or create tests for a specific file, function, class, or directory. Also after a refactor or bug fix when the user wants regression coverage.
-allowed-tools: Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
+allowed-tools: Read, Grep, Glob, Bash, Agent, Workflow, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
-effort: max
+effort: xhigh
 argument-hint: "[path | identifier]"
 ---
 
@@ -86,13 +86,39 @@ State the resolved target and detected project context clearly before proceeding
 
 ## Step 2: Deep Analysis
 
-Launch **3 Explore subagents in parallel** (`subagent_type: "Explore"`, `model: "opus"`).
+Run the analysis as a **`Workflow` of exactly 3 read-only Explore agents in parallel** — one per lens below. Call the `Workflow` tool with a script along these lines, substituting the context resolved in Step 1 and each agent's brief verbatim from its `### Agent N` section:
+
+```js
+export const meta = {
+  name: 'test-gen-analysis',
+  description: 'Three-lens test analysis: code paths, test environment, edge cases & coverage',
+  phases: [{ title: 'Analyze' }],
+}
+
+const CONTEXT = `<the target files and project context (manifest, test config, conventions) resolved in Step 1>`
+
+const LENSES = [
+  { key: 'code-analysis',    brief: `<Agent 1 brief, verbatim>` },
+  { key: 'test-environment', brief: `<Agent 2 brief, verbatim>` },
+  { key: 'edge-cases',       brief: `<Agent 3 brief, verbatim>` },
+]
+
+const reports = await parallel(LENSES.map(l => () =>
+  agent(`Analyze the target code through the ${l.key} lens. Read the FULL target files, not just snippets.\n${CONTEXT}\n\n${l.brief}`,
+    { label: `analyze:${l.key}`, phase: 'Analyze', agentType: 'Explore' })))
+
+return { lenses: LENSES.map((l, i) => ({ key: l.key, report: reports[i] })) }
+```
+
+Wait for the Workflow's completion notification before continuing — never synthesize from partial results. A `null` report means that agent was skipped or failed; say so in the plan header rather than silently dropping the lens.
+
+**Fallback.** If the `Workflow` tool is not available in this session, launch the same three briefs as **3 Explore subagents in parallel** via the `Agent` tool (`subagent_type: "Explore"`, `model: "opus"`).
 
 Provide each agent with:
 - The resolved target files from Step 1
 - The project context (manifest, test config, conventions)
 
-**IMPORTANT:** All subagents MUST be launched with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The model override to Opus is required because Explore defaults to Haiku, which lacks the depth needed for this skill's thorough analysis. Never use general-purpose subagents in this skill.
+**IMPORTANT:** All subagents MUST be launched with `agentType: 'Explore'` inside the `Workflow` script (omit `model` — each agent inherits the session model), or, on the `Agent`-tool fallback, with `subagent_type: "Explore"` and `model: "opus"` (resolves to the latest Claude Opus, the most capable model). The Explore agent is read-only by design (Edit and Write are denied at the agent level). This ensures no subagent can accidentally modify the project during analysis. The explicit `model: "opus"` on the `Agent` path pins the fan-out to the latest Opus even when a cheaper default subagent model is configured, so the analysis never silently runs on a smaller model. Never use general-purpose subagents in this skill.
 
 **IMPORTANT:** Instruct each agent to read the **full target files** (not just snippets) so they understand the complete code structure, all branches, and how functions relate to each other.
 

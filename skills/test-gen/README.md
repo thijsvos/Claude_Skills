@@ -7,7 +7,7 @@ Analyzes code to generate comprehensive tests covering happy paths, edge cases, 
 Generates high-quality tests through deep code analysis and convention detection, delivered in 5 steps:
 
 1. **Scope Resolution** -- resolves the test target from a file path, directory, function/class name, or auto-detects recently changed files via git
-2. **Deep Analysis** -- launches 3 parallel agents: Code Analysis (maps all functions, code paths, side effects), Test Environment Discovery (detects framework, conventions, existing coverage), and Edge Case Mapping (identifies boundary conditions, error scenarios, and coverage gaps)
+2. **Deep Analysis** -- runs a Workflow of 3 parallel read-only agents: Code Analysis (maps all functions, code paths, side effects), Test Environment Discovery (detects framework, conventions, existing coverage), and Edge Case Mapping (identifies boundary conditions, error scenarios, and coverage gaps)
 3. **Test Plan** -- presents a structured plan showing every test scenario grouped by priority (critical vs nice-to-have), with already-covered scenarios identified
 4. **Test Generation** -- after user approval, writes test files that match the project's exact conventions (naming, structure, assertions, mocking patterns)
 5. **Verification** -- runs the generated tests and reports results, offering to fix any failures
@@ -15,6 +15,7 @@ Generates high-quality tests through deep code analysis and convention detection
 ## Requirements
 
 - Claude Code with **Opus model** access
+- The `Workflow` tool (available on paid plans and the API); the skill falls back to the `Agent` tool when it is unavailable or disabled via the `disableWorkflows` setting
 - Git repository (for auto-detection of changed files; not required when specifying a target explicitly)
 
 ## Usage
@@ -81,13 +82,13 @@ Covers: catch branch at line 28
 | Setting | Value |
 |---------|-------|
 | Model | `opus` |
-| Effort | `max` |
+| Effort | `xhigh` |
 | Argument hint | `[path \| identifier]` |
-| Allowed tools | Read, Grep, Glob, Bash, Agent, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode |
+| Allowed tools | Read, Grep, Glob, Bash, Agent, Workflow, Edit, Write, AskUserQuestion, EnterPlanMode, ExitPlanMode |
 
 ## Safety
 
-- **Read-only analysis**: All analysis agents (Step 2) use the Explore subagent type, which cannot modify files
+- **Read-only analysis**: All analysis agents (Step 2) use the Explore subagent type, which cannot modify files — the Workflow spawns them with `agentType: 'Explore'`, the Agent-tool fallback with `subagent_type: "Explore"`
 - **User approval gate**: No test files are written until you review and approve the test plan
 - **No dependency installation without consent**: If no test framework is detected, the skill proposes setup steps and waits for approval before installing anything
 - **No source code modification**: The skill only creates new test files -- it never modifies your source code
