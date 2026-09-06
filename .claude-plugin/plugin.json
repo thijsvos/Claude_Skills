@@ -1,7 +1,7 @@
 {
   "name": "claude-skills",
   "displayName": "Claude Skills",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A curated collection of custom skills for Claude Code: structured code review, refactoring, test generation, root-cause diagnosis, dependency and docstring audits, language-idiom checks, GitHub repository audits, and issue+PR shipping.",
   "author": {
     "name": "thijsvos",

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-06
+
 ### Changed
 
 - **Every fan-out skill now runs its analysis as a `Workflow` of exactly 3 read-only Explore agents by default.** `vet`, `refactor`, `test-gen`, `diagnose`, `dep-check`, `docstring-check`, `idiom-check`, `enhance`, and `github-audit` previously launched their three lenses through the `Agent` tool; each now embeds a small Workflow script (`export const meta = {...}` + one `parallel()` round of three `agent()` calls with `agentType: 'Explore'`) that gives the fan-out deterministic orchestration, `/workflows` live progress, and resumable results. The `### Agent N` sections remain the single source of truth for each brief — the script references them rather than duplicating the checklists. The `Agent`-tool fan-out is retained verbatim as a **fallback** for sessions where the Workflow tool is unavailable or disabled (`disableWorkflows`), so `Agent` stays in `allowed-tools` alongside the newly declared `Workflow`. Since the Workflow tool's own gate accepts "a skill whose instructions tell you to call Workflow" as an explicit opt-in, no `ultra` argument is needed for this three-agent tier; `vet ultra` still layers its adversarial-verify stage on top of the same script.
@@ -283,7 +285,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - README.md with badges, usage example, contributing section, and support info
 - .gitignore with defensive entries for .env, logs, node_modules, and __pycache__
 
-[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/thijsvos/Claude_Skills/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/thijsvos/Claude_Skills/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/thijsvos/Claude_Skills/compare/v0.2.6...v0.3.0
 [0.2.1]: https://github.com/thijsvos/Claude_Skills/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/thijsvos/Claude_Skills/compare/v0.1.1...v0.2.0
